@@ -1,0 +1,45 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AlbumGrid from '../components/AlbumGrid.tsx';
+
+const query = `
+PREFIX wd: <https://shira.wikibase.cloud/entity/>
+PREFIX wdt: <https://shira.wikibase.cloud/prop/direct/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+PREFIX bd: <http://www.bigdata.com/rdf#>
+
+SELECT ?album ?albumLabel ?form ?formLabel WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+
+  ?album wdt:P39 wd:Q4.                     # album is instance of Q4
+  OPTIONAL { ?album wdt:P200 ?form. }       # replace P200 with your property
+}
+LIMIT 100
+`;
+
+const url = `https://shira.wikibase.cloud/query/sparql?query=${encodeURIComponent(query)}&format=json`;
+
+const res = await fetch(url, {
+    headers: {
+        'User-Agent': 'ShiraApp/1.0 (youremail@example.com)',
+        'Accept': 'application/json',
+    },
+});
+
+if (!res.ok) {
+    throw new Error(await res.text());
+}
+
+const data = await res.json();
+
+const albums = data.results.bindings.map((entry) => ({
+    id: entry.album.value.split('/').pop(),
+    label: entry.albumLabel?.value,
+    form: entry.formLabel?.value || null,
+    image: '/placeholder.jpg' // Replace with entry.image?.value if you add images
+}));
+---
+
+<BaseLayout title="Albums">
+    <AlbumGrid albums={albums} client:load />
+</BaseLayout>
