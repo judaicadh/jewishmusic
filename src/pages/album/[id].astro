@@ -1,0 +1,89 @@
+---
+// ✅ Mark page as dynamic (not pre-rendered)
+
+import BaseLayout from "../../layouts/BaseLayout.astro";
+export const prerender = false;
+import { algoliasearch } from 'algoliasearch';
+
+type AlbumHit = {
+    objectID: string;
+    freedmanTitle: string;
+    release_cover?: string;
+    performer?: { label: string } | { label: string }[];
+    genre?: { label: string } | { label: string }[];
+    catalogNumber?: string;
+    publicationDate?: string;
+    description?: string;
+    youtubeIds?: string[];
+    tracks?: { label: string }[];
+};
+
+const { id } = Astro.params;
+const client = algoliasearch('ZLPYTBTZ4R', 'be46d26dfdb299f9bee9146b63c99c77');
+
+const { results } = await client.getObjects({
+    requests: [
+        {
+            indexName: 'dev_JewishMusic',
+            objectID: id,
+        },
+    ],
+});
+
+const album = results[0] as AlbumHit;
+
+if (!album) {
+    throw new Error(`Album with ID ${id} not found`);
+}
+---
+
+<BaseLayout title={album.freedmanTitle}>
+    <div class="max-w-4xl mx-auto px-6 py-12 space-y-8">
+        <img
+                src={album.release_cover ?? '/placeholder.jpg'}
+                alt={album.freedmanTitle}
+                class="rounded-lg shadow w-full max-w-md mx-auto"
+        />
+
+        <h1 class="text-3xl font-bold text-center">{album.freedmanTitle}</h1>
+
+        <div class="text-center text-gray-600">
+            {album.performer && <p><strong>Performer:</strong> {album.performer}</p>}
+            {album.genre && <p><strong>Genre:</strong> {album.genre}</p>}
+            {album.catalogNumber && <p><strong>Catalog Number:</strong> {album.catalogNumber}</p>}
+            {album.publicationDate && <p><strong>Publication Date:</strong> {album.publicationDate}</p>}
+        </div>
+
+        {album.description && (
+                <div class="prose max-w-none">
+                    <h2>Description</h2>
+                    <p>{album.description}</p>
+                </div>
+        )}
+
+        {album.youtubeIds?.length > 0 && (
+                <div class="space-y-6">
+                    <h2 class="text-xl font-semibold">Videos</h2>
+                    {album.youtubeIds.map((id) => (
+                            <iframe
+                                    src={`https://www.youtube.com/embed/${id}`}
+                                    class="w-full aspect-video rounded"
+                                    allow="autoplay; encrypted-media"
+                                    allowfullscreen
+                            ></iframe>
+                    ))}
+                </div>
+        )}
+
+        {album.tracks?.length > 0 && (
+                <div class="prose max-w-none">
+                    <h2>Track List</h2>
+                    <ol>
+                        {album.tracks.map((track) => (
+                                <li>{track.label}</li>
+                        ))}
+                    </ol>
+                </div>
+        )}
+    </div>
+</BaseLayout>

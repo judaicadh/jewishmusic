@@ -1,9 +1,9 @@
 ---
+import "../styles/global.css";
 import Footer from "../components/Footer.astro";
 import { SEO } from "astro-seo";
-import "../styles/global.css";
- import {ClientRouter} from "astro:transitions";
-import SmoothScroll from "../components/SmoothScroll.astro";
+
+import { ClientRouter } from "astro:transitions";
 import Header from "../components/Header.astro";
 
 type Props = {
@@ -12,10 +12,7 @@ type Props = {
 };
 
 const { title, description = "Shira: Jewish Music Collections at Penn Libraries" } = Astro.props;
-
-// Current page value (/home, /about, /404 ...)
-const currentPage =
-    Astro.url.pathname.replace(/\/$/, "").split("/").pop() || "home";
+const currentPage = Astro.url.pathname.replace(/\/$/, "").split("/").pop() || "home";
 ---
 
 <html lang="en" data-page={currentPage}>
@@ -26,22 +23,18 @@ const currentPage =
             charset="UTF-8"
             openGraph={{
                 basic: {
-                    title: title,
+                    title,
                     type: "image/jpeg",
                     image: "/playersclub-og.jpg",
                 },
             }}
-
-
-
     />
     <ClientRouter />
+    <title></title>
 </head>
-<body>
-<SmoothScroll />
+<body class="bg-white text-black">
 <Header />
 <slot />
 <Footer />
-<script src="../scripts/imageFade.js"></script>
 </body>
 </html>
