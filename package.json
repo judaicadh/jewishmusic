@@ -7,7 +7,7 @@
     "build": "astro build && pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
-    "postinstall": "flowbite-react patch"
+    "postinstall": "flowbite-react build"
   },
   "dependencies": {
     "@astrojs/netlify": "^7.0.4",
