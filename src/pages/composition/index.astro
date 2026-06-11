@@ -1,3 +1,53 @@
 ---
-export const prerender = false;
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllCompositions } from '../../lib/wikibase';
+
+const compositions = [...(await getAllCompositions()).values()]
+  .map((c) => ({ id: c.id, title: c.title, count: c.appearsOn.length }))
+  .sort((a, b) => a.title.localeCompare(b.title));
 ---
+
+<BaseLayout title="Compositions">
+  <section class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mb-8">
+      <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-3xl">Compositions &amp; tracks</h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{compositions.length.toLocaleString()} tracks in the collection.</p>
+    </div>
+
+    <ul id="list" class="grid grid-cols-1 gap-2 sm:grid-cols-2"></ul>
+
+    <div class="mt-8 flex items-center justify-center gap-4">
+      <button id="prev" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Previous</button>
+      <span id="page-info" class="text-sm text-gray-500 dark:text-gray-400"></span>
+      <button id="next" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Next</button>
+    </div>
+  </section>
+
+  <script is:inline define:vars={{ items: compositions }}>
+    const PAGE_SIZE = 80;
+    let page = 0;
+    const pages = Math.ceil(items.length / PAGE_SIZE);
+    const list = document.getElementById('list');
+    const info = document.getElementById('page-info');
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+    function render() {
+      const slice = items.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+      list.innerHTML = slice
+        .map(
+          (it) => `<li><a href="/composition/${it.id}" class="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-4 py-2.5 hover:border-blue-400 dark:border-gray-800">
+            <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-200">${it.title}</span>
+            ${it.count > 1 ? `<span class="shrink-0 text-xs text-gray-400">${it.count}×</span>` : ''}
+          </a></li>`
+        )
+        .join('');
+      info.textContent = `Page ${page + 1} of ${pages}`;
+      prev.disabled = page === 0;
+      next.disabled = page >= pages - 1;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    prev.addEventListener('click', () => { if (page > 0) { page--; render(); } });
+    next.addEventListener('click', () => { if (page < pages - 1) { page++; render(); } });
+    render();
+  </script>
+</BaseLayout>

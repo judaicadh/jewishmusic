@@ -1,4 +1,53 @@
 ---
-export const prerender = false;
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllArtists, type Artist } from '../../lib/wikibase';
 
+export async function getStaticPaths() {
+  const all = [...(await getAllArtists()).values()];
+  const limit = process.env.ALBUM_LIMIT ? Number(process.env.ALBUM_LIMIT) : undefined;
+  return (limit ? all.slice(0, limit) : all).map((artist) => ({
+    params: { artist: artist.id },
+    props: { artist },
+  }));
+}
+
+const { artist } = Astro.props as { artist: Artist };
+const discogsUrl = artist.discogsArtistId
+  ? `https://www.discogs.com/artist/${artist.discogsArtistId}`
+  : undefined;
+const entityUrl = `https://shira.wikibase.cloud/wiki/Item:${artist.id}`;
 ---
+
+<BaseLayout title={artist.name}>
+  <section
+    class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+    data-pagefind-body
+    data-pagefind-meta={`title:${artist.name}`}
+  >
+    <span hidden data-pagefind-filter="type:Artist"></span>
+
+    <header class="mb-8">
+      <span class="rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-purple-700 dark:bg-purple-500/10 dark:text-purple-300">Artist</span>
+      <h1 class="mt-3 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-4xl">{artist.name}</h1>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        {artist.albums.length} {artist.albums.length === 1 ? 'album' : 'albums'} in the collection
+      </p>
+      <div class="mt-3 flex flex-wrap gap-4 text-sm">
+        {discogsUrl && <a href={discogsUrl} target="_blank" rel="noreferrer" class="font-medium text-blue-700 hover:underline dark:text-blue-400">Discogs ↗</a>}
+        <a href={entityUrl} target="_blank" rel="noreferrer" class="font-medium text-blue-700 hover:underline dark:text-blue-400">View in Wikibase ({artist.id}) ↗</a>
+      </div>
+    </header>
+
+    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Discography</h2>
+    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      {artist.albums.map((album) => (
+        <a href={`/album/${album.id}`} class="group block">
+          <div class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
+            <img src={album.cover ?? '/placeholder.jpg'} alt="" loading="lazy" class="aspect-square w-full object-cover transition group-hover:scale-105" />
+          </div>
+          <p class="mt-2 line-clamp-2 text-sm font-medium text-gray-800 dark:text-gray-200">{album.title}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+</BaseLayout>

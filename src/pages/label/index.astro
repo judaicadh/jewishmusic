@@ -1,3 +1,28 @@
 ---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllLabels } from '../../lib/wikibase';
 
+const labels = [...(await getAllLabels()).values()]
+  .map((l) => ({ id: l.id, name: l.name, count: l.albums.length }))
+  .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 ---
+
+<BaseLayout title="Record labels">
+  <section class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mb-8">
+      <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-3xl">Record labels</h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{labels.length.toLocaleString()} labels, sorted by number of releases.</p>
+    </div>
+
+    <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {labels.map((it) => (
+        <li>
+          <a href={`/label/${it.id}`} class="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 px-4 py-3 hover:border-blue-400 dark:border-gray-800">
+            <span class="truncate font-medium text-gray-800 dark:text-gray-200">{it.name}</span>
+            <span class="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">{it.count}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</BaseLayout>

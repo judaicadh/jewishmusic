@@ -1,4 +1,44 @@
 ---
-export const prerender = false;
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllCompositions, type Composition } from '../../lib/wikibase';
 
+export async function getStaticPaths() {
+  const all = [...(await getAllCompositions()).values()];
+  const limit = process.env.ALBUM_LIMIT ? Number(process.env.ALBUM_LIMIT) : undefined;
+  return (limit ? all.slice(0, limit) : all).map((composition) => ({
+    params: { composition: composition.id },
+    props: { composition },
+  }));
+}
+
+const { composition } = Astro.props as { composition: Composition };
+const entityUrl = `https://shira.wikibase.cloud/wiki/Item:${composition.id}`;
 ---
+
+<BaseLayout title={composition.title}>
+  <section
+    class="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8"
+    data-pagefind-body
+    data-pagefind-meta={`title:${composition.title}`}
+  >
+    <span hidden data-pagefind-filter="type:Composition"></span>
+
+    <header class="mb-8">
+      <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">Track</span>
+      <h1 class="mt-3 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-4xl">{composition.title}</h1>
+      <a href={entityUrl} target="_blank" rel="noreferrer" class="mt-3 inline-block text-sm font-medium text-blue-700 hover:underline dark:text-blue-400">View in Wikibase ({composition.id}) ↗</a>
+    </header>
+
+    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Appears on</h2>
+    <ul class="space-y-2">
+      {composition.appearsOn.map((a) => (
+        <li class="rounded-2xl border border-gray-100 px-4 py-3 dark:border-gray-800">
+          <a href={`/album/${a.albumId}`} class="flex items-center justify-between gap-4">
+            <span class="font-medium text-gray-900 hover:text-blue-700 hover:underline dark:text-white dark:hover:text-blue-300">{a.albumTitle}</span>
+            <span class="shrink-0 text-sm text-gray-500 dark:text-gray-400">track {a.ordinal}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</BaseLayout>

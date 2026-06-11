@@ -24,7 +24,11 @@ export const P = {
   catalogNumber: 'P152',
   publicationDate: 'P72',
   discogsReleaseId: 'P34',
+  discogsArtistId: 'P148',
+  discogsLabelId: 'P63',
   freedmanAlbumId: 'P68',
+  partOf: 'P1',
+  formOfWork: 'P24',
   releaseCover: 'P160',
   image: 'P22',
   spotifyAlbumId: 'P28',
@@ -39,6 +43,10 @@ export const P = {
 /** Class item IDs (objects of P39 "instance of"). */
 export const CLASS = {
   album: 'Q4',
+  artist: 'Q28',
+  human: 'Q279',
+  recordLabel: 'Q24',
+  audioTrack: 'Q302',
 } as const;
 
 /** Prefix block prepended to every SPARQL query. */
@@ -252,6 +260,124 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
   }
 
   return albums;
+}
+
+// ---------------------------------------------------------------------------
+// Derived entities: artists, labels, compositions
+//
+// Albums already embed their performers, record labels, and tracks, so the
+// other entity pages are reverse-indexes over the album cache — no per-entity
+// queries. Two small bulk queries enrich artists/labels with their Discogs IDs.
+// ---------------------------------------------------------------------------
+
+export type AlbumRef = { id: string; title: string; cover?: string };
+
+export type Artist = {
+  id: string;
+  name: string;
+  albums: AlbumRef[];
+  discogsArtistId?: string;
+};
+
+export type Label = {
+  id: string;
+  name: string;
+  albums: AlbumRef[];
+  discogsLabelId?: string;
+};
+
+export type Composition = {
+  id: string;
+  title: string;
+  appearsOn: Array<{ albumId: string; albumTitle: string; ordinal: number }>;
+};
+
+let _artists: Promise<Map<string, Artist>> | null = null;
+let _labels: Promise<Map<string, Label>> | null = null;
+let _compositions: Promise<Map<string, Composition>> | null = null;
+
+const albumRef = (a: Album): AlbumRef => ({ id: a.id, title: a.title, cover: a.cover });
+
+/** Fetch {entityId -> externalId} for everything carrying a property. */
+async function externalIds(prop: string): Promise<Map<string, string>> {
+  const rows = await sparql(`SELECT ?s ?v WHERE { ?s wdt:${prop} ?v }`);
+  const m = new Map<string, string>();
+  for (const r of rows) if (r.s && r.v) m.set(toId(r.s)!, r.v);
+  return m;
+}
+
+export function getAllArtists(): Promise<Map<string, Artist>> {
+  if (!_artists) _artists = buildArtists();
+  return _artists;
+}
+
+async function buildArtists(): Promise<Map<string, Artist>> {
+  const [albums, discogs] = await Promise.all([
+    getAllAlbums(),
+    externalIds(P.discogsArtistId),
+  ]);
+  const artists = new Map<string, Artist>();
+  for (const album of albums.values()) {
+    for (const perf of album.performers) {
+      if (!perf.id) continue;
+      let artist = artists.get(perf.id);
+      if (!artist) {
+        artist = { id: perf.id, name: perf.label, albums: [], discogsArtistId: discogs.get(perf.id) };
+        artists.set(perf.id, artist);
+      }
+      artist.albums.push(albumRef(album));
+    }
+  }
+  for (const a of artists.values()) a.albums.sort((x, y) => x.title.localeCompare(y.title));
+  return artists;
+}
+
+export function getAllLabels(): Promise<Map<string, Label>> {
+  if (!_labels) _labels = buildLabels();
+  return _labels;
+}
+
+async function buildLabels(): Promise<Map<string, Label>> {
+  const [albums, discogs] = await Promise.all([
+    getAllAlbums(),
+    externalIds(P.discogsLabelId),
+  ]);
+  const labels = new Map<string, Label>();
+  for (const album of albums.values()) {
+    for (const lab of album.recordLabels) {
+      if (!lab.id) continue;
+      let label = labels.get(lab.id);
+      if (!label) {
+        label = { id: lab.id, name: lab.label, albums: [], discogsLabelId: discogs.get(lab.id) };
+        labels.set(lab.id, label);
+      }
+      label.albums.push(albumRef(album));
+    }
+  }
+  for (const l of labels.values()) l.albums.sort((x, y) => x.title.localeCompare(y.title));
+  return labels;
+}
+
+export function getAllCompositions(): Promise<Map<string, Composition>> {
+  if (!_compositions) _compositions = buildCompositions();
+  return _compositions;
+}
+
+async function buildCompositions(): Promise<Map<string, Composition>> {
+  const albums = await getAllAlbums();
+  const comps = new Map<string, Composition>();
+  for (const album of albums.values()) {
+    for (const track of album.tracks) {
+      if (!track.id) continue;
+      let comp = comps.get(track.id);
+      if (!comp) {
+        comp = { id: track.id, title: track.label, appearsOn: [] };
+        comps.set(track.id, comp);
+      }
+      comp.appearsOn.push({ albumId: album.id, albumTitle: album.title, ordinal: track.ordinal });
+    }
+  }
+  return comps;
 }
 
 /** List every album QID (bare, e.g. "Q3257"). Use for getStaticPaths(). */

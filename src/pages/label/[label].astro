@@ -1,3 +1,53 @@
 ---
-export const prerender = false;
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllLabels, type Label } from '../../lib/wikibase';
+
+export async function getStaticPaths() {
+  const all = [...(await getAllLabels()).values()];
+  const limit = process.env.ALBUM_LIMIT ? Number(process.env.ALBUM_LIMIT) : undefined;
+  return (limit ? all.slice(0, limit) : all).map((label) => ({
+    params: { label: label.id },
+    props: { label },
+  }));
+}
+
+const { label } = Astro.props as { label: Label };
+const discogsUrl = label.discogsLabelId
+  ? `https://www.discogs.com/label/${label.discogsLabelId}`
+  : undefined;
+const entityUrl = `https://shira.wikibase.cloud/wiki/Item:${label.id}`;
 ---
+
+<BaseLayout title={label.name}>
+  <section
+    class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+    data-pagefind-body
+    data-pagefind-meta={`title:${label.name}`}
+  >
+    <span hidden data-pagefind-filter="type:Label"></span>
+
+    <header class="mb-8">
+      <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Record label</span>
+      <h1 class="mt-3 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-4xl">{label.name}</h1>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        {label.albums.length} {label.albums.length === 1 ? 'release' : 'releases'} in the collection
+      </p>
+      <div class="mt-3 flex flex-wrap gap-4 text-sm">
+        {discogsUrl && <a href={discogsUrl} target="_blank" rel="noreferrer" class="font-medium text-blue-700 hover:underline dark:text-blue-400">Discogs ↗</a>}
+        <a href={entityUrl} target="_blank" rel="noreferrer" class="font-medium text-blue-700 hover:underline dark:text-blue-400">View in Wikibase ({label.id}) ↗</a>
+      </div>
+    </header>
+
+    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Releases</h2>
+    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      {label.albums.map((album) => (
+        <a href={`/album/${album.id}`} class="group block">
+          <div class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
+            <img src={album.cover ?? '/placeholder.jpg'} alt="" loading="lazy" class="aspect-square w-full object-cover transition group-hover:scale-105" />
+          </div>
+          <p class="mt-2 line-clamp-2 text-sm font-medium text-gray-800 dark:text-gray-200">{album.title}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+</BaseLayout>

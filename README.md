@@ -33,6 +33,7 @@ shira.wikibase.cloud ──(SPARQL + Special:EntityData, at build time)──▶
 | `src/lib/wikibase.ts` | Wikibase client: SPARQL helper, `getEntity()`, property/class ID constants, and the memoized bulk loader `getAllAlbums()`. |
 | `src/pages/album/[id].astro` | One static page per album, rendered from Wikibase. |
 | `src/pages/album/index.astro` | Album browse grid (client-paginated over the full catalog) + Pagefind search. |
+| `src/pages/artist/`, `label/`, `composition/` | Detail + index pages for each entity type, reverse-indexed from the album cache (`getAllArtists` / `getAllLabels` / `getAllCompositions`). |
 | `src/components/PagefindSearch.astro` | Loads the Pagefind UI and wires up the `type` / `year` / `performer` / `label` filters. |
 | `src/layouts/BaseLayout.astro` | Shared HTML shell, SEO, header/footer. |
 
@@ -96,5 +97,6 @@ Astro 6 · React 19 (islands) · Tailwind CSS 4 · Pagefind · Netlify adapter.
 - [x] Wikibase client + bulk loader
 - [x] Static album detail pages from Wikibase
 - [x] Album browse + Pagefind search (Algolia removed from the album flow)
-- [ ] Artist / composition / label pages (same static pattern)
+- [x] Artist / composition / label pages (reverse-indexed from the album cache)
 - [ ] Netlify build hook for rebuild-on-edit (optionally nightly)
+- [ ] Remove remaining Algolia code (`AlbumGrid.tsx`, `algoliasearch`, `react-instantsearch`)

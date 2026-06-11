@@ -1,3 +1,53 @@
 ---
-export const prerender = false;
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllArtists } from '../../lib/wikibase';
+
+const artists = [...(await getAllArtists()).values()]
+  .map((a) => ({ id: a.id, name: a.name, count: a.albums.length }))
+  .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 ---
+
+<BaseLayout title="Artists">
+  <section class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mb-8">
+      <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-3xl">Artists</h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{artists.length.toLocaleString()} artists, sorted by number of albums.</p>
+    </div>
+
+    <ul id="list" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"></ul>
+
+    <div class="mt-8 flex items-center justify-center gap-4">
+      <button id="prev" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Previous</button>
+      <span id="page-info" class="text-sm text-gray-500 dark:text-gray-400"></span>
+      <button id="next" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Next</button>
+    </div>
+  </section>
+
+  <script is:inline define:vars={{ items: artists, basePath: '/artist' }}>
+    const PAGE_SIZE = 60;
+    let page = 0;
+    const pages = Math.ceil(items.length / PAGE_SIZE);
+    const list = document.getElementById('list');
+    const info = document.getElementById('page-info');
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+    function render() {
+      const slice = items.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+      list.innerHTML = slice
+        .map(
+          (it) => `<li><a href="${basePath}/${it.id}" class="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 px-4 py-3 hover:border-blue-400 dark:border-gray-800">
+            <span class="truncate font-medium text-gray-800 dark:text-gray-200">${it.name}</span>
+            <span class="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">${it.count}</span>
+          </a></li>`
+        )
+        .join('');
+      info.textContent = `Page ${page + 1} of ${pages}`;
+      prev.disabled = page === 0;
+      next.disabled = page >= pages - 1;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    prev.addEventListener('click', () => { if (page > 0) { page--; render(); } });
+    next.addEventListener('click', () => { if (page < pages - 1) { page++; render(); } });
+    render();
+  </script>
+</BaseLayout>
