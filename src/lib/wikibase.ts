@@ -47,7 +47,13 @@ export const CLASS = {
   human: 'Q279',
   recordLabel: 'Q24',
   audioTrack: 'Q302',
+  musicalWork: 'Q303',
+  composition: 'Q11',
+  song: 'Q284',
 } as const;
+
+/** Item classes treated as "compositions" (musical works / songs). */
+export const WORK_CLASSES = [CLASS.musicalWork, CLASS.composition, CLASS.song] as const;
 
 /** Prefix block prepended to every SPARQL query. */
 export const PREFIXES = `
@@ -289,6 +295,9 @@ export type Label = {
 export type Composition = {
   id: string;
   title: string;
+  /** instance-of label for work entities (e.g. "musical work", "song"). */
+  type?: string;
+  performers: Array<{ id?: string; label: string }>;
   appearsOn: Array<{ albumId: string; albumTitle: string; ordinal: number }>;
 };
 
@@ -364,19 +373,54 @@ export function getAllCompositions(): Promise<Map<string, Composition>> {
 }
 
 async function buildCompositions(): Promise<Map<string, Composition>> {
-  const albums = await getAllAlbums();
+  // Two sources, merged by entity id:
+  //   1. Every musical-work / composition / song entity (title, type, performers).
+  //   2. Anything an album lists in its tracklist (so album → track links resolve).
+  // A work that appears in no tracklist still gets a page; a tracklist entry that
+  // isn't a catalogued work still gets one too.
+  const valuesClause = WORK_CLASSES.map((c) => `wd:${c}`).join(' ');
+  const [albums, workRows] = await Promise.all([
+    getAllAlbums(),
+    sparql(`
+      SELECT ?s (SAMPLE(?title) AS ?title) (SAMPLE(?lbl) AS ?lbl) (SAMPLE(?clsL) AS ?type)
+             (GROUP_CONCAT(DISTINCT ?perfStr; separator="||") AS ?performers) WHERE {
+        ?s wdt:${P.instanceOf} ?c . VALUES ?c { ${valuesClause} }
+        ?c rdfs:label ?clsL FILTER(LANG(?clsL)="en")
+        OPTIONAL { ?s wdt:${P.title} ?title }
+        OPTIONAL { ?s rdfs:label ?lbl FILTER(LANG(?lbl)="en") }
+        OPTIONAL { ?s wdt:${P.performer} ?p . ?p rdfs:label ?pl FILTER(LANG(?pl)="en")
+                   BIND(CONCAT(STR(?p),"::",?pl) AS ?perfStr) }
+      } GROUP BY ?s
+    `),
+  ]);
+
   const comps = new Map<string, Composition>();
+  for (const r of workRows) {
+    const id = toId(r.s)!;
+    comps.set(id, {
+      id,
+      title: r.title || r.lbl || id,
+      type: r.type,
+      performers: parseRefs(r.performers),
+      appearsOn: [],
+    });
+  }
+
   for (const album of albums.values()) {
     for (const track of album.tracks) {
       if (!track.id) continue;
       let comp = comps.get(track.id);
       if (!comp) {
-        comp = { id: track.id, title: track.label, appearsOn: [] };
+        comp = { id: track.id, title: track.label, performers: [], appearsOn: [] };
         comps.set(track.id, comp);
+      } else if (comp.title === comp.id) {
+        comp.title = track.label;
       }
       comp.appearsOn.push({ albumId: album.id, albumTitle: album.title, ordinal: track.ordinal });
     }
   }
+
+  for (const c of comps.values()) c.appearsOn.sort((a, b) => a.albumTitle.localeCompare(b.albumTitle));
   return comps;
 }
 

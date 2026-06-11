@@ -33,7 +33,7 @@ shira.wikibase.cloud ──(SPARQL + Special:EntityData, at build time)──▶
 | `src/lib/wikibase.ts` | Wikibase client: SPARQL helper, `getEntity()`, property/class ID constants, and the memoized bulk loader `getAllAlbums()`. |
 | `src/pages/album/[id].astro` | One static page per album, rendered from Wikibase. |
 | `src/pages/album/index.astro` | Album browse grid (client-paginated over the full catalog) + Pagefind search. |
-| `src/pages/artist/`, `label/`, `composition/` | Detail + index pages for each entity type, reverse-indexed from the album cache (`getAllArtists` / `getAllLabels` / `getAllCompositions`). |
+| `src/pages/artist/`, `label/`, `composition/` | Detail + index pages for each entity type. Artists/labels are reverse-indexed from the album cache; compositions merge the musical-work/song entities with album-tracklist membership (`getAllArtists` / `getAllLabels` / `getAllCompositions`). |
 | `src/components/PagefindSearch.astro` | Loads the Pagefind UI and wires up the `type` / `year` / `performer` / `label` filters. |
 | `src/layouts/BaseLayout.astro` | Shared HTML shell, SEO, header/footer. |
 
