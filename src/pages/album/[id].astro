@@ -25,13 +25,26 @@ const youtubeEmbed = album.youtubePlaylistId
   ? `https://www.youtube.com/embed/videoseries?list=${album.youtubePlaylistId}`
   : undefined;
 
+// Internet Archive: one id yields both cover art and an embeddable audio player.
+const iaId = album.internetArchiveId;
+const iaImage = iaId ? `https://archive.org/services/img/${iaId}` : undefined;
+const iaEmbed = iaId ? `https://archive.org/embed/${iaId}` : undefined;
+
 const discogsUrl = album.discogsReleaseId
   ? `https://www.discogs.com/release/${album.discogsReleaseId}`
   : undefined;
 const entityUrl = `https://shira.wikibase.cloud/wiki/Item:${album.id}`;
 
 const pubYear = album.publicationDate?.slice(0, 4)?.replace(/^\+/, '');
-const coverImage = album.cover ?? '/placeholder.jpg';
+// Cover precedence: Internet Archive → Discogs (P160) → placeholder.
+const coverImage = iaImage ?? album.cover ?? '/placeholder.jpg';
+
+// External archive / listen links, in display order.
+const externalLinks = [
+  album.dartmouthUrl && { label: 'Dartmouth Jewish Sound Archive', href: album.dartmouthUrl },
+  album.rsaUrl && { label: 'Recorded Sound Archives', href: album.rsaUrl },
+  discogsUrl && { label: 'Discogs', href: discogsUrl },
+].filter(Boolean) as Array<{ label: string; href: string }>;
 ---
 
 <BaseLayout title={pageTitle}>
@@ -56,9 +69,21 @@ const coverImage = album.cover ?? '/placeholder.jpg';
             <img src={coverImage} alt={pageTitle} data-pagefind-meta="image[src]" class="aspect-square w-full object-cover" />
           </div>
 
+          {iaEmbed && (
+            <div class="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Listen — Internet Archive</h2>
+              <iframe
+                src={iaEmbed}
+                class="h-[150px] w-full rounded-2xl border-0"
+                loading="lazy"
+                allow="autoplay"
+              ></iframe>
+            </div>
+          )}
+
           {spotifyEmbed && (
             <div class="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-              <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Listen</h2>
+              <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Listen — Spotify</h2>
               <iframe
                 src={spotifyEmbed}
                 class="h-[352px] w-full rounded-2xl border-0"
@@ -78,6 +103,19 @@ const coverImage = album.cover ?? '/placeholder.jpg';
                 allow="autoplay; encrypted-media; picture-in-picture"
                 allowfullscreen
               ></iframe>
+            </div>
+          )}
+
+          {externalLinks.length > 0 && (
+            <div class="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Archives &amp; links</h2>
+              <ul class="space-y-2 text-sm">
+                {externalLinks.map((l) => (
+                  <li>
+                    <a href={l.href} target="_blank" rel="noreferrer" class="font-medium text-blue-700 hover:underline dark:text-blue-400">{l.label} ↗</a>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </aside>

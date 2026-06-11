@@ -35,6 +35,13 @@ export const P = {
   youtubePlaylistId: 'P30',
   audio: 'P85',
   describedAtUrl: 'P4',
+  dartmouthLink: 'P162',
+  rsaLink: 'P163',
+  // Internet Archive identifier: property does NOT exist in the Wikibase yet.
+  // Create it as datatype External ID with formatter URL
+  // https://archive.org/details/$1, then set its PID here to light up IA art +
+  // audio across the site (see buildAlbums / album/[id].astro).
+  internetArchiveId: undefined as string | undefined,
   // tracklist qualifiers
   seriesOrdinal: 'P104',
   duration: 'P13',
@@ -142,6 +149,10 @@ export type Album = {
   cover?: string;
   spotifyAlbumId?: string;
   youtubePlaylistId?: string;
+  dartmouthUrl?: string;
+  rsaUrl?: string;
+  /** Populated once the Internet Archive identifier property exists (see P.internetArchiveId). */
+  internetArchiveId?: string;
   performers: Array<{ id?: string; label: string }>;
   recordLabels: Array<{ id?: string; label: string }>;
   tracks: AlbumTrack[];
@@ -188,6 +199,7 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
              (SAMPLE(?catalog) AS ?catalog) (SAMPLE(?pubDate) AS ?pubDate)
              (SAMPLE(?discogs) AS ?discogs) (SAMPLE(?freedmanId) AS ?freedmanId)
              (SAMPLE(?cover) AS ?cover) (SAMPLE(?spotify) AS ?spotify) (SAMPLE(?youtube) AS ?youtube)
+             (SAMPLE(?dartmouth) AS ?dartmouth) (SAMPLE(?rsa) AS ?rsa)
              (GROUP_CONCAT(DISTINCT ?perfStr; separator="||") AS ?performers)
              (GROUP_CONCAT(DISTINCT ?labelStr; separator="||") AS ?labels) WHERE {
         ?s wdt:${P.instanceOf} wd:${CLASS.album} .
@@ -200,6 +212,8 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
         OPTIONAL { ?s wdt:${P.releaseCover} ?cover }
         OPTIONAL { ?s wdt:${P.spotifyAlbumId} ?spotify }
         OPTIONAL { ?s wdt:${P.youtubePlaylistId} ?youtube }
+        OPTIONAL { ?s wdt:${P.dartmouthLink} ?dartmouth }
+        OPTIONAL { ?s wdt:${P.rsaLink} ?rsa }
         OPTIONAL { ?s wdt:${P.performer} ?perf . ?perf rdfs:label ?pl FILTER(LANG(?pl)="en")
                    BIND(CONCAT(STR(?perf),"::",?pl) AS ?perfStr) }
         OPTIONAL { ?s wdt:${P.recordLabel} ?lab . ?lab rdfs:label ?ll FILTER(LANG(?ll)="en")
@@ -233,6 +247,8 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
       cover: r.cover,
       spotifyAlbumId: r.spotify,
       youtubePlaylistId: r.youtube,
+      dartmouthUrl: r.dartmouth,
+      rsaUrl: r.rsa,
       performers: parseRefs(r.performers),
       recordLabels: parseRefs(r.labels),
       tracks: [],

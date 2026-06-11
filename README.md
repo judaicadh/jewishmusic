@@ -88,6 +88,27 @@ Albums are items with `instance of` (P39) → **Q4 (album)**. Key properties:
   or multi-valued. Tracklists are grouped per statement and sorted by a parsed
   leading integer, falling back to query order.
 
+## Media & external archives
+
+Album pages surface, when present: a **Listen** player (Internet Archive →
+Spotify → YouTube) and an **Archives & links** panel (Dartmouth Jewish Sound
+Archive P162, Recorded Sound Archives / RSA P163, Discogs). Cover art precedence
+is **Internet Archive → Discogs (P160) → placeholder**.
+
+**Internet Archive is the highest-value source: one item id gives both cover art
+(`/services/img/<id>`) and an embeddable audio player (`/embed/<id>`).** To enable it:
+
+1. In the Wikibase, create a property **"Internet Archive identifier"**, datatype
+   **External ID**, formatter URL `https://archive.org/details/$1`.
+2. Put its PID in `P.internetArchiveId` in `src/lib/wikibase.ts` and add an
+   `OPTIONAL { ?s wdt:<PID> ?ia }` to the album bulk query (mirrors `dartmouthUrl`).
+3. Populate it. To find candidates, run the matcher (read-only; writes a CSV for review):
+   ```bash
+   npx tsx scripts/match-internet-archive.ts --limit 200   # test slice
+   npx tsx scripts/match-internet-archive.ts               # whole catalog → ia-matches.csv
+   ```
+   Review `ia-matches.csv`, then add the good `iaIdentifier` values to each album.
+
 ## Tech stack
 
 Astro 6 · React 19 (islands) · Tailwind CSS 4 · Pagefind · Netlify adapter.
