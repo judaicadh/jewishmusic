@@ -1,89 +1,223 @@
 ---
-// ✅ Mark page as dynamic (not pre-rendered)
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllAlbums, type Album } from '../../lib/wikibase';
 
-import BaseLayout from "../../layouts/BaseLayout.astro";
-export const prerender = false;
-import { algoliasearch } from 'algoliasearch';
-
-type AlbumHit = {
-    objectID: string;
-    freedmanTitle: string;
-    release_cover?: string;
-    performer?: { label: string } | { label: string }[];
-    genre?: { label: string } | { label: string }[];
-    catalogNumber?: string;
-    publicationDate?: string;
-    description?: string;
-    youtubeIds?: string[];
-    tracks?: { label: string }[];
-};
-
-const { id } = Astro.params;
-const client = algoliasearch('ZLPYTBTZ4R', 'be46d26dfdb299f9bee9146b63c99c77');
-
-const { results } = await client.getObjects({
-    requests: [
-        {
-            indexName: 'dev_JewishMusic',
-            objectID: id,
-        },
-    ],
-});
-
-const album = results[0] as AlbumHit;
-
-if (!album) {
-    throw new Error(`Album with ID ${id} not found`);
+// Static generation, one page per album, sourced live from the Shira Wikibase.
+// The entire catalog is loaded once via two bulk queries (getAllAlbums), so this
+// no longer fires per-page requests. Set ALBUM_LIMIT to cap pages during dev.
+export async function getStaticPaths() {
+  const all = [...(await getAllAlbums()).values()];
+  const limit = process.env.ALBUM_LIMIT ? Number(process.env.ALBUM_LIMIT) : undefined;
+  return (limit ? all.slice(0, limit) : all).map((album) => ({
+    params: { id: album.id },
+    props: { album },
+  }));
 }
+
+const { album } = Astro.props as { album: Album };
+
+const pageTitle = album.title || album.freedmanTitle || album.id;
+
+const spotifyEmbed = album.spotifyAlbumId
+  ? `https://open.spotify.com/embed/album/${album.spotifyAlbumId}`
+  : undefined;
+const youtubeEmbed = album.youtubePlaylistId
+  ? `https://www.youtube.com/embed/videoseries?list=${album.youtubePlaylistId}`
+  : undefined;
+
+const discogsUrl = album.discogsReleaseId
+  ? `https://www.discogs.com/release/${album.discogsReleaseId}`
+  : undefined;
+const entityUrl = `https://shira.wikibase.cloud/wiki/Item:${album.id}`;
+
+const pubYear = album.publicationDate?.slice(0, 4)?.replace(/^\+/, '');
+const coverImage = album.cover ?? '/placeholder.jpg';
 ---
 
-<BaseLayout title={album.freedmanTitle}>
-    <div class="max-w-4xl mx-auto px-6 py-12 space-y-8">
-        <img
-                src={album.release_cover ?? '/placeholder.jpg'}
-                alt={album.freedmanTitle}
-                class="rounded-lg shadow w-full max-w-md mx-auto"
-        />
+<BaseLayout title={pageTitle}>
+  <section
+    class="bg-white py-8 antialiased dark:bg-gray-950 md:py-12"
+    data-pagefind-body
+    data-pagefind-meta={`title:${pageTitle}`}
+  >
+    {/* Pagefind facets (indexed, not rendered) */}
+    <span hidden data-pagefind-filter="type:Album"></span>
+    {pubYear && <span hidden data-pagefind-filter={`year:${pubYear}`}></span>}
+    {album.performers.map((p) => (
+      <span hidden data-pagefind-filter={`performer:${p.label}`}></span>
+    ))}
+    {album.recordLabels.map((l) => (
+      <span hidden data-pagefind-filter={`label:${l.label}`}></span>
+    ))}
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="grid gap-10 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
+        <aside class="space-y-5">
+          <div class="overflow-hidden rounded-3xl border border-gray-200 bg-gray-50 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <img src={coverImage} alt={pageTitle} data-pagefind-meta="image[src]" class="aspect-square w-full object-cover" />
+          </div>
 
-        <h1 class="text-3xl font-bold text-center">{album.freedmanTitle}</h1>
+          {spotifyEmbed && (
+            <div class="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Listen</h2>
+              <iframe
+                src={spotifyEmbed}
+                class="h-[352px] w-full rounded-2xl border-0"
+                loading="lazy"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              ></iframe>
+            </div>
+          )}
 
-        <div class="text-center text-gray-600">
-            {album.performer && <p><strong>Performer:</strong> {album.performer}</p>}
-            {album.genre && <p><strong>Genre:</strong> {album.genre}</p>}
-            {album.catalogNumber && <p><strong>Catalog Number:</strong> {album.catalogNumber}</p>}
-            {album.publicationDate && <p><strong>Publication Date:</strong> {album.publicationDate}</p>}
+          {youtubeEmbed && (
+            <div class="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Watch</h2>
+              <iframe
+                src={youtubeEmbed}
+                class="aspect-video w-full rounded-2xl border-0"
+                loading="lazy"
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
+          )}
+        </aside>
+
+        <div class="space-y-8">
+          <header class="space-y-5">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">Album</span>
+              {album.catalogNumber && (
+                <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">Catalog no. {album.catalogNumber}</span>
+              )}
+              {pubYear && (
+                <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">{pubYear}</span>
+              )}
+            </div>
+
+            <div>
+              <h1 class="text-3xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-4xl">{pageTitle}</h1>
+              {album.freedmanTitle && album.freedmanTitle !== pageTitle && (
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Freedman title: {album.freedmanTitle}</p>
+              )}
+            </div>
+
+            {album.performers.length > 0 && (
+              <div>
+                <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Artists</h2>
+                <div class="flex flex-wrap gap-2">
+                  {album.performers.map((artist) =>
+                    artist.id ? (
+                      <a
+                        href={`/artist/${artist.id}`}
+                        class="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-800 transition hover:border-blue-400 hover:text-blue-700 dark:border-gray-700 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:text-blue-300"
+                      >{artist.label}</a>
+                    ) : (
+                      <span class="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-800 dark:border-gray-700 dark:text-gray-200">{artist.label}</span>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+          </header>
+
+          <div class="grid gap-4 md:grid-cols-3">
+            <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Tracks</dt>
+              <dd class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{album.tracks.length || '—'}</dd>
+            </div>
+            <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Label</dt>
+              <dd class="mt-2 truncate text-lg font-semibold text-gray-900 dark:text-white">{album.recordLabels[0]?.label ?? '—'}</dd>
+            </div>
+            <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Media</dt>
+              <dd class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{spotifyEmbed || youtubeEmbed ? 'Playable' : 'Metadata only'}</dd>
+            </div>
+          </div>
+
+          <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <section class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <div class="mb-4 flex items-center justify-between gap-3">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Track list</h2>
+                <span class="text-sm text-gray-500 dark:text-gray-400">{album.tracks.length} tracks</span>
+              </div>
+
+              {album.tracks.length > 0 ? (
+                <ol class="space-y-2">
+                  {album.tracks.map((track, i) => (
+                    <li class="flex items-center justify-between gap-4 rounded-2xl border border-gray-100 px-4 py-3 dark:border-gray-800">
+                      <div class="flex min-w-0 items-center gap-3">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{i + 1}</span>
+                        {track.id ? (
+                          <a href={`/composition/${track.id}`} class="truncate font-medium text-gray-900 hover:text-blue-700 hover:underline dark:text-white dark:hover:text-blue-300">{track.label}</a>
+                        ) : (
+                          <span class="truncate font-medium text-gray-900 dark:text-white">{track.label}</span>
+                        )}
+                      </div>
+                      {track.duration && (
+                        <span class="shrink-0 text-sm tabular-nums text-gray-500 dark:text-gray-400">{track.duration}</span>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p class="text-gray-600 dark:text-gray-400">No track list is available for this album yet.</p>
+              )}
+            </section>
+
+            <aside class="space-y-6">
+              <section class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Metadata</h2>
+                <dl class="mt-4 space-y-4 text-sm">
+                  <div>
+                    <dt class="font-semibold text-gray-500 dark:text-gray-400">Title</dt>
+                    <dd class="mt-1 text-gray-900 dark:text-white">{pageTitle}</dd>
+                  </div>
+                  {album.catalogNumber && (
+                    <div>
+                      <dt class="font-semibold text-gray-500 dark:text-gray-400">Catalog number</dt>
+                      <dd class="mt-1 text-gray-900 dark:text-white">{album.catalogNumber}</dd>
+                    </div>
+                  )}
+                  {album.publicationDate && (
+                    <div>
+                      <dt class="font-semibold text-gray-500 dark:text-gray-400">Publication date</dt>
+                      <dd class="mt-1 text-gray-900 dark:text-white">{pubYear}</dd>
+                    </div>
+                  )}
+                  {album.recordLabels.length > 0 && (
+                    <div>
+                      <dt class="font-semibold text-gray-500 dark:text-gray-400">Record label</dt>
+                      <dd class="mt-1 flex flex-wrap gap-2">
+                        {album.recordLabels.map((l) =>
+                          l.id ? (
+                            <a href={`/label/${l.id}`} class="rounded-full bg-gray-100 px-2.5 py-1 text-gray-700 hover:text-blue-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:text-blue-300">{l.label}</a>
+                          ) : (
+                            <span class="rounded-full bg-gray-100 px-2.5 py-1 text-gray-700 dark:bg-gray-800 dark:text-gray-300">{l.label}</span>
+                          )
+                        )}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </section>
+
+              <section class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Links</h2>
+                <ul class="mt-4 space-y-2 text-sm">
+                  {discogsUrl && (
+                    <li><a href={discogsUrl} target="_blank" rel="noreferrer" class="font-medium text-blue-700 hover:underline dark:text-blue-400">Discogs release ↗</a></li>
+                  )}
+                  {album.freedmanAlbumId && (
+                    <li class="text-gray-600 dark:text-gray-400">Freedman Album ID: {album.freedmanAlbumId}</li>
+                  )}
+                  <li><a href={entityUrl} target="_blank" rel="noreferrer" class="font-medium text-blue-700 hover:underline dark:text-blue-400">View in Wikibase ({album.id}) ↗</a></li>
+                </ul>
+              </section>
+            </aside>
+          </div>
         </div>
-
-        {album.description && (
-                <div class="prose max-w-none">
-                    <h2>Description</h2>
-                    <p>{album.description}</p>
-                </div>
-        )}
-
-        {album.youtubeIds?.length > 0 && (
-                <div class="space-y-6">
-                    <h2 class="text-xl font-semibold">Videos</h2>
-                    {album.youtubeIds.map((id) => (
-                            <iframe
-                                    src={`https://www.youtube.com/embed/${id}`}
-                                    class="w-full aspect-video rounded"
-                                    allow="autoplay; encrypted-media"
-                                    allowfullscreen
-                            ></iframe>
-                    ))}
-                </div>
-        )}
-
-        {album.tracks?.length > 0 && (
-                <div class="prose max-w-none">
-                    <h2>Track List</h2>
-                    <ol>
-                        {album.tracks.map((track) => (
-                                <li>{track.label}</li>
-                        ))}
-                    </ol>
-                </div>
-        )}
+      </div>
     </div>
+  </section>
 </BaseLayout>

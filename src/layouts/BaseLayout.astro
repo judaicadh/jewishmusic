@@ -5,18 +5,23 @@ import { SEO } from "astro-seo";
 
 import { ClientRouter } from "astro:transitions";
 import Header from "../components/Header.astro";
+import SmoothScroll from "../components/SmoothScroll.astro";
+import '@fontsource/carrois-gothic';
+
 
 type Props = {
-    title: string;
+    title?: string;
     description?: string;
 };
 
-const { title, description = "Shira: Jewish Music Collections at Penn Libraries" } = Astro.props;
+const SITE_NAME = "Shira: Jewish Music Collections at Penn Libraries";
+const { title = SITE_NAME, description = SITE_NAME } = Astro.props;
 const currentPage = Astro.url.pathname.replace(/\/$/, "").split("/").pop() || "home";
 ---
 
 <html lang="en" data-page={currentPage}>
 <head>
+
     <SEO
             title={title}
             description={description}
@@ -24,8 +29,8 @@ const currentPage = Astro.url.pathname.replace(/\/$/, "").split("/").pop() || "h
             openGraph={{
                 basic: {
                     title,
-                    type: "image/jpeg",
-                    image: "/playersclub-og.jpg",
+                    type: "website",
+                    image: "/JewishMusic.png",
                 },
             }}
     />
@@ -34,6 +39,7 @@ const currentPage = Astro.url.pathname.replace(/\/$/, "").split("/").pop() || "h
 </head>
 <body class="bg-white text-black">
 <Header />
+<SmoothScroll />
 <slot />
 <Footer />
 </body>

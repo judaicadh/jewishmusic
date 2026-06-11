@@ -1,0 +1,357 @@
+/**
+ * Client for the Shira Wikibase (https://shira.wikibase.cloud).
+ *
+ * Two ways to read data:
+ *   - sparql(): run a SELECT against the Blazegraph query service. Best for
+ *     lists and for pulling in linked labels in one round trip.
+ *   - getEntity(): fetch a single entity's full JSON via Special:EntityData.
+ *
+ * Raw SPARQL does NOT auto-inject the wd:/wdt: prefixes the query GUI adds, so
+ * every query string here must declare the prefixes it uses (see PREFIXES).
+ */
+
+export const WIKIBASE_BASE = 'https://shira.wikibase.cloud';
+export const SPARQL_ENDPOINT = `${WIKIBASE_BASE}/query/sparql`;
+
+/** Property IDs, resolved from the live instance. Keep in sync with Wikibase. */
+export const P = {
+  instanceOf: 'P39',
+  title: 'P7',
+  freedmanTitle: 'P151',
+  performer: 'P21',
+  recordLabel: 'P20',
+  tracklist: 'P110',
+  catalogNumber: 'P152',
+  publicationDate: 'P72',
+  discogsReleaseId: 'P34',
+  freedmanAlbumId: 'P68',
+  releaseCover: 'P160',
+  image: 'P22',
+  spotifyAlbumId: 'P28',
+  youtubePlaylistId: 'P30',
+  audio: 'P85',
+  describedAtUrl: 'P4',
+  // tracklist qualifiers
+  seriesOrdinal: 'P104',
+  duration: 'P13',
+} as const;
+
+/** Class item IDs (objects of P39 "instance of"). */
+export const CLASS = {
+  album: 'Q4',
+} as const;
+
+/** Prefix block prepended to every SPARQL query. */
+export const PREFIXES = `
+PREFIX wd: <${WIKIBASE_BASE}/entity/>
+PREFIX wdt: <${WIKIBASE_BASE}/prop/direct/>
+PREFIX p: <${WIKIBASE_BASE}/prop/>
+PREFIX ps: <${WIKIBASE_BASE}/prop/statement/>
+PREFIX pq: <${WIKIBASE_BASE}/prop/qualifier/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+`;
+
+export type SparqlValue = { type: string; value: string; datatype?: string; 'xml:lang'?: string };
+export type SparqlRow = Record<string, string | undefined>;
+
+/**
+ * Run a SPARQL SELECT and return rows as plain {var: value} objects.
+ * PREFIXES are prepended automatically; pass only the query body.
+ */
+export async function sparql(query: string): Promise<SparqlRow[]> {
+  const body = new URLSearchParams({ query: PREFIXES + query });
+  const res = await fetch(SPARQL_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/sparql-results+json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'shira-music-site (https://music.judaicadhpenn.org)',
+    },
+    body,
+  });
+  if (!res.ok) {
+    throw new Error(`SPARQL ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  }
+  const json = (await res.json()) as {
+    results: { bindings: Record<string, SparqlValue>[] };
+  };
+  return json.results.bindings.map((b) => {
+    const row: SparqlRow = {};
+    for (const [k, v] of Object.entries(b)) row[k] = v.value;
+    return row;
+  });
+}
+
+/** Strip the entity-URI prefix, leaving the bare QID/PID (e.g. "Q3257"). */
+export const toId = (uri: string | undefined): string | undefined =>
+  uri?.split('/').pop();
+
+export type WikibaseEntity = {
+  id: string;
+  labels: Record<string, { value: string }>;
+  descriptions: Record<string, { value: string }>;
+  claims: Record<string, any[]>;
+};
+
+/** Fetch a single entity's full JSON via Special:EntityData. */
+export async function getEntity(qid: string): Promise<WikibaseEntity | null> {
+  const res = await fetch(`${WIKIBASE_BASE}/wiki/Special:EntityData/${qid}.json`, {
+    headers: { 'User-Agent': 'shira-music-site (https://music.judaicadhpenn.org)' },
+  });
+  if (!res.ok) return null;
+  const json = (await res.json()) as { entities: Record<string, WikibaseEntity> };
+  return json.entities[qid] ?? Object.values(json.entities)[0] ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Albums
+// ---------------------------------------------------------------------------
+
+export type AlbumTrack = {
+  id?: string;
+  label: string;
+  ordinal: number;
+  /** The raw P104 value as stored (may be non-numeric, e.g. "3-7", "sides"). */
+  rawOrdinal?: string;
+  duration?: string;
+};
+
+export type Album = {
+  id: string;
+  title: string;
+  freedmanTitle?: string;
+  catalogNumber?: string;
+  publicationDate?: string;
+  discogsReleaseId?: string;
+  freedmanAlbumId?: string;
+  cover?: string;
+  spotifyAlbumId?: string;
+  youtubePlaylistId?: string;
+  performers: Array<{ id?: string; label: string }>;
+  recordLabels: Array<{ id?: string; label: string }>;
+  tracks: AlbumTrack[];
+};
+
+// ---------------------------------------------------------------------------
+// Bulk loader
+//
+// Building a page per album one-at-a-time would fire ~3 SPARQL queries × 6,355
+// albums. Instead, load the entire catalog in two bulk queries (~23s total),
+// assemble it in memory once, and memoize. Both getStaticPaths() and the album
+// index consume the cached Map.
+// ---------------------------------------------------------------------------
+
+let _allAlbums: Promise<Map<string, Album>> | null = null;
+
+/** Every album, fully assembled, keyed by QID. Cached for the build's lifetime. */
+export function getAllAlbums(): Promise<Map<string, Album>> {
+  if (!_allAlbums) _allAlbums = loadAllAlbums();
+  return _allAlbums;
+}
+
+/** Parse a GROUP_CONCAT of "entityURI::label" pairs into {id,label}[]. */
+function parseRefs(concat?: string): Array<{ id?: string; label: string }> {
+  if (!concat) return [];
+  const seen = new Set<string>();
+  const out: Array<{ id?: string; label: string }> = [];
+  for (const part of concat.split('||')) {
+    const idx = part.lastIndexOf('::');
+    if (idx === -1) continue;
+    const id = toId(part.slice(0, idx));
+    const label = part.slice(idx + 2);
+    if (!label || (id && seen.has(id))) continue;
+    if (id) seen.add(id);
+    out.push({ id, label });
+  }
+  return out;
+}
+
+async function loadAllAlbums(): Promise<Map<string, Album>> {
+  const [scalarRows, trackRows] = await Promise.all([
+    sparql(`
+      SELECT ?s (SAMPLE(?title) AS ?title) (SAMPLE(?freedmanTitle) AS ?freedmanTitle)
+             (SAMPLE(?catalog) AS ?catalog) (SAMPLE(?pubDate) AS ?pubDate)
+             (SAMPLE(?discogs) AS ?discogs) (SAMPLE(?freedmanId) AS ?freedmanId)
+             (SAMPLE(?cover) AS ?cover) (SAMPLE(?spotify) AS ?spotify) (SAMPLE(?youtube) AS ?youtube)
+             (GROUP_CONCAT(DISTINCT ?perfStr; separator="||") AS ?performers)
+             (GROUP_CONCAT(DISTINCT ?labelStr; separator="||") AS ?labels) WHERE {
+        ?s wdt:${P.instanceOf} wd:${CLASS.album} .
+        OPTIONAL { ?s wdt:${P.title} ?title }
+        OPTIONAL { ?s wdt:${P.freedmanTitle} ?freedmanTitle }
+        OPTIONAL { ?s wdt:${P.catalogNumber} ?catalog }
+        OPTIONAL { ?s wdt:${P.publicationDate} ?pubDate }
+        OPTIONAL { ?s wdt:${P.discogsReleaseId} ?discogs }
+        OPTIONAL { ?s wdt:${P.freedmanAlbumId} ?freedmanId }
+        OPTIONAL { ?s wdt:${P.releaseCover} ?cover }
+        OPTIONAL { ?s wdt:${P.spotifyAlbumId} ?spotify }
+        OPTIONAL { ?s wdt:${P.youtubePlaylistId} ?youtube }
+        OPTIONAL { ?s wdt:${P.performer} ?perf . ?perf rdfs:label ?pl FILTER(LANG(?pl)="en")
+                   BIND(CONCAT(STR(?perf),"::",?pl) AS ?perfStr) }
+        OPTIONAL { ?s wdt:${P.recordLabel} ?lab . ?lab rdfs:label ?ll FILTER(LANG(?ll)="en")
+                   BIND(CONCAT(STR(?lab),"::",?ll) AS ?labelStr) }
+      } GROUP BY ?s
+    `),
+    sparql(`
+      SELECT ?s ?track (SAMPLE(?tl) AS ?label) (SAMPLE(?qt) AS ?qtitle)
+             (SAMPLE(?ord) AS ?ordinal) (SAMPLE(?dur) AS ?duration) WHERE {
+        ?s wdt:${P.instanceOf} wd:${CLASS.album} ; p:${P.tracklist} ?st .
+        ?st ps:${P.tracklist} ?track .
+        OPTIONAL { ?st pq:${P.seriesOrdinal} ?ord }
+        OPTIONAL { ?st pq:${P.title} ?qt }
+        OPTIONAL { ?st pq:${P.duration} ?dur }
+        OPTIONAL { ?track rdfs:label ?tl FILTER(LANG(?tl)="en") }
+      } GROUP BY ?s ?st ?track
+    `),
+  ]);
+
+  const albums = new Map<string, Album>();
+  for (const r of scalarRows) {
+    const id = toId(r.s)!;
+    albums.set(id, {
+      id,
+      title: r.title || r.freedmanTitle || id,
+      freedmanTitle: r.freedmanTitle,
+      catalogNumber: r.catalog,
+      publicationDate: r.pubDate,
+      discogsReleaseId: r.discogs,
+      freedmanAlbumId: r.freedmanId,
+      cover: r.cover,
+      spotifyAlbumId: r.spotify,
+      youtubePlaylistId: r.youtube,
+      performers: parseRefs(r.performers),
+      recordLabels: parseRefs(r.labels),
+      tracks: [],
+    });
+  }
+
+  // Group tracks by album, then order each list (see getAlbum for the P104 caveat).
+  const byAlbum = new Map<string, typeof trackRows>();
+  for (const r of trackRows) {
+    const id = toId(r.s)!;
+    (byAlbum.get(id) ?? byAlbum.set(id, []).get(id)!).push(r);
+  }
+  const parseOrd = (s?: string) => {
+    const m = s?.match(/\d+/);
+    return m ? Number(m[0]) : undefined;
+  };
+  for (const [id, rows] of byAlbum) {
+    const album = albums.get(id);
+    if (!album) continue;
+    album.tracks = rows
+      .map((r, i) => ({
+        id: toId(r.track),
+        label: r.qtitle || r.label || `Track ${i + 1}`,
+        ordinal: parseOrd(r.ordinal) ?? i + 1,
+        rawOrdinal: r.ordinal,
+        duration: r.duration,
+        _i: i,
+      }))
+      .sort((a, b) => a.ordinal - b.ordinal || a._i - b._i)
+      .map(({ _i, ...t }) => t);
+  }
+
+  return albums;
+}
+
+/** List every album QID (bare, e.g. "Q3257"). Use for getStaticPaths(). */
+export async function listAlbumIds(limit?: number): Promise<string[]> {
+  const rows = await sparql(
+    `SELECT ?s WHERE { ?s wdt:${P.instanceOf} wd:${CLASS.album} } ORDER BY ?s${
+      limit ? ` LIMIT ${limit}` : ''
+    }`
+  );
+  return rows.map((r) => toId(r.s)!).filter(Boolean);
+}
+
+/** Fetch one album with linked performer/label names and an ordered tracklist. */
+export async function getAlbum(qid: string): Promise<Album | null> {
+  const [scalar] = await sparql(`
+    SELECT ?title ?freedmanTitle ?catalog ?pubDate ?discogs ?freedmanId ?cover ?spotify ?youtube WHERE {
+      OPTIONAL { wd:${qid} wdt:${P.title} ?title }
+      OPTIONAL { wd:${qid} wdt:${P.freedmanTitle} ?freedmanTitle }
+      OPTIONAL { wd:${qid} wdt:${P.catalogNumber} ?catalog }
+      OPTIONAL { wd:${qid} wdt:${P.publicationDate} ?pubDate }
+      OPTIONAL { wd:${qid} wdt:${P.discogsReleaseId} ?discogs }
+      OPTIONAL { wd:${qid} wdt:${P.freedmanAlbumId} ?freedmanId }
+      OPTIONAL { wd:${qid} wdt:${P.releaseCover} ?cover }
+      OPTIONAL { wd:${qid} wdt:${P.spotifyAlbumId} ?spotify }
+      OPTIONAL { wd:${qid} wdt:${P.youtubePlaylistId} ?youtube }
+    } LIMIT 1
+  `);
+
+  // An album that doesn't even exist returns no scalar row at all.
+  if (!scalar) {
+    const entity = await getEntity(qid);
+    if (!entity) return null;
+  }
+
+  const linked = await sparql(`
+    SELECT ?prop ?item ?itemLabel WHERE {
+      VALUES ?prop { wdt:${P.performer} wdt:${P.recordLabel} }
+      wd:${qid} ?prop ?item .
+      ?item rdfs:label ?itemLabel FILTER(LANG(?itemLabel)="en")
+    }
+  `);
+
+  // Group by statement: P104 ("series ordinal") is sometimes multi-valued and
+  // non-numeric (e.g. "3-7", "sides"), so a plain join double-counts tracks and
+  // an xsd:integer ORDER BY breaks. SAMPLE collapses each statement to one row;
+  // we sort in JS by any leading integer, falling back to query order.
+  const trackRows = await sparql(`
+    SELECT ?track (SAMPLE(?trackLabel) AS ?label) (SAMPLE(?qtitle) AS ?qt)
+           (SAMPLE(?ord) AS ?ordinal) (SAMPLE(?dur) AS ?duration) WHERE {
+      wd:${qid} p:${P.tracklist} ?st .
+      ?st ps:${P.tracklist} ?track .
+      OPTIONAL { ?st pq:${P.seriesOrdinal} ?ord }
+      OPTIONAL { ?st pq:${P.title} ?qtitle }
+      OPTIONAL { ?st pq:${P.duration} ?dur }
+      OPTIONAL { ?track rdfs:label ?trackLabel FILTER(LANG(?trackLabel)="en") }
+    } GROUP BY ?st ?track
+  `);
+
+  const performerProp = `${WIKIBASE_BASE}/prop/direct/${P.performer}`;
+  const labelProp = `${WIKIBASE_BASE}/prop/direct/${P.recordLabel}`;
+
+  const performers = linked
+    .filter((r) => r.prop === performerProp)
+    .map((r) => ({ id: toId(r.item), label: r.itemLabel! }));
+  const recordLabels = linked
+    .filter((r) => r.prop === labelProp)
+    .map((r) => ({ id: toId(r.item), label: r.itemLabel! }));
+
+  const parseOrd = (s?: string) => {
+    const m = s?.match(/\d+/);
+    return m ? Number(m[0]) : undefined;
+  };
+  const tracks: AlbumTrack[] = trackRows
+    .map((r, i) => ({
+      id: toId(r.track),
+      label: r.qt || r.label || `Track ${i + 1}`,
+      ordinal: parseOrd(r.ordinal) ?? i + 1,
+      rawOrdinal: r.ordinal,
+      duration: r.duration,
+      _i: i,
+    }))
+    .sort((a, b) => a.ordinal - b.ordinal || a._i - b._i)
+    .map(({ _i, ...t }) => t);
+
+  const title =
+    scalar?.title || scalar?.freedmanTitle || (await getEntity(qid))?.labels?.en?.value || qid;
+
+  return {
+    id: qid,
+    title,
+    freedmanTitle: scalar?.freedmanTitle,
+    catalogNumber: scalar?.catalog,
+    publicationDate: scalar?.pubDate,
+    discogsReleaseId: scalar?.discogs,
+    freedmanAlbumId: scalar?.freedmanId,
+    cover: scalar?.cover,
+    spotifyAlbumId: scalar?.spotify,
+    youtubePlaylistId: scalar?.youtube,
+    performers,
+    recordLabels,
+    tracks,
+  };
+}

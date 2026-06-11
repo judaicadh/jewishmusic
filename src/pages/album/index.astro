@@ -1,10 +1,80 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import AlbumGrid from '../../components/AlbumGrid.tsx';
+import PagefindSearch from '../../components/PagefindSearch.astro';
+import { getAllAlbums } from '../../lib/wikibase';
 
-
+// Browse data: a compact, sorted list of every album for client-side paging.
+// Search (the Pagefind box) covers the full catalog; this grid is the no-JS-
+// friendly browse view.
+const albums = [...(await getAllAlbums()).values()]
+  .map((a) => ({ id: a.id, title: a.title, cover: a.cover ?? '/placeholder.jpg' }))
+  .sort((a, b) => a.title.localeCompare(b.title));
 ---
 
 <BaseLayout title="Albums">
-    <AlbumGrid client:load />
+  <section class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mb-8">
+      <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
+        Albums
+      </h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        {albums.length.toLocaleString()} albums from the Shira collection.
+      </p>
+    </div>
+
+    <div class="mb-10">
+      <PagefindSearch />
+    </div>
+
+    <div
+      id="album-grid"
+      class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+    ></div>
+
+    <div class="mt-8 flex items-center justify-center gap-4">
+      <button
+        id="prev"
+        class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"
+      >Previous</button>
+      <span id="page-info" class="text-sm text-gray-500 dark:text-gray-400"></span>
+      <button
+        id="next"
+        class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"
+      >Next</button>
+    </div>
+  </section>
+
+  <script is:inline define:vars={{ albums }}>
+    const PAGE_SIZE = 48;
+    let page = 0;
+    const pages = Math.ceil(albums.length / PAGE_SIZE);
+    const grid = document.getElementById('album-grid');
+    const info = document.getElementById('page-info');
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+
+    function render() {
+      const start = page * PAGE_SIZE;
+      const slice = albums.slice(start, start + PAGE_SIZE);
+      grid.innerHTML = slice
+        .map(
+          (a) => `
+        <a href="/album/${a.id}" class="group block">
+          <div class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
+            <img src="${a.cover}" alt="" loading="lazy" class="aspect-square w-full object-cover transition group-hover:scale-105" />
+          </div>
+          <p class="mt-2 line-clamp-2 text-sm font-medium text-gray-800 dark:text-gray-200">${a.title}</p>
+        </a>`
+        )
+        .join('');
+      info.textContent = `Page ${page + 1} of ${pages}`;
+      prev.disabled = page === 0;
+      next.disabled = page >= pages - 1;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    prev.addEventListener('click', () => { if (page > 0) { page--; render(); } });
+    next.addEventListener('click', () => { if (page < pages - 1) { page++; render(); } });
+    render();
+  </script>
 </BaseLayout>
