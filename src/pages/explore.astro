@@ -1,6 +1,5 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import PagefindSearch from '../components/PagefindSearch.astro';
 import { getAllAlbums, getAllArtists, getAllLabels, getAllCompositions } from '../lib/wikibase';
 
 const [albums, artists, labels, comps] = await Promise.all([
@@ -22,18 +21,16 @@ const browse = [
   <section class="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
     <p class="text-sm font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">Explore</p>
     <h1 class="mt-2 text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
-      Search the catalog
+      Explore the catalog
     </h1>
     <p class="mt-4 text-lg leading-8 text-gray-700 dark:text-gray-300">
-      Search across albums, artists, compositions, and labels, or browse each by type.
-      Filter results by type, year, performer, and label.
+      Browse the collection by type below, or use the
+      <a href="/" class="font-medium text-blue-700 hover:underline dark:text-blue-400">search on the home page</a>
+      to look across albums, artists, compositions, and labels at once — with filters
+      for type, performer, and label.
     </p>
 
-    <div class="mt-8">
-      <PagefindSearch />
-    </div>
-
-    <h2 class="mt-14 text-2xl font-semibold text-gray-900 dark:text-white">Browse by type</h2>
+    <h2 class="mt-12 text-2xl font-semibold text-gray-900 dark:text-white">Browse by type</h2>
     <div class="mt-6 grid gap-4 sm:grid-cols-2">
       {browse.map((b) => (
         <a href={b.href} class="group block rounded-3xl border border-gray-200 bg-white p-6 shadow-sm hover:border-blue-400 dark:border-gray-800 dark:bg-gray-900">

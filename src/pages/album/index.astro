@@ -1,11 +1,9 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import PagefindSearch from '../../components/PagefindSearch.astro';
 import { getAllAlbums } from '../../lib/wikibase';
 
-// Browse data: a compact, sorted list of every album for client-side paging.
-// Search (the Pagefind box) covers the full catalog; this grid is the no-JS-
-// friendly browse view.
+// A compact, sorted list of every album for client-side paging. Full-text
+// search lives on the home page (Algolia); this is the browse-all view.
 const albums = [...(await getAllAlbums()).values()]
   .map((a) => ({ id: a.id, title: a.title, cover: a.cover ?? '/placeholder.jpg' }))
   .sort((a, b) => a.title.localeCompare(b.title));
@@ -20,10 +18,6 @@ const albums = [...(await getAllAlbums()).values()]
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         {albums.length.toLocaleString()} albums from the Shira collection.
       </p>
-    </div>
-
-    <div class="mb-10">
-      <PagefindSearch />
     </div>
 
     <div

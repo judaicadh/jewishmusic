@@ -1,61 +1,48 @@
 # Shira — Jewish Music Collections at Penn Libraries
 
-A static [Astro](https://astro.build) site for the Freedman / Penn Libraries Jewish
-music collections. All catalog data comes from the project's Wikibase instance,
-**[shira.wikibase.cloud](https://shira.wikibase.cloud)**, fetched at build time and
-rendered to static HTML. Search runs entirely in the browser via
-[Pagefind](https://pagefind.app) — there is **no hosted search service and no
-database** to maintain.
+An [Astro](https://astro.build) site for the Penn Libraries Jewish music
+collections (anchored by the Robert and Molly Freedman Jewish Sound Archive).
 
-## How it works
+Two data paths:
 
-```
-shira.wikibase.cloud ──(SPARQL + Special:EntityData, at build time)──▶ Astro
-        │                                                                 │
-        │                                                      static HTML per album
-        │                                                                 ▼
-        └──────────────────────────────────────────▶ Pagefind indexes the HTML
-                                                       → /pagefind/ (client-side search)
-```
+- **Content & detail pages are static, built from Wikibase.** Album, artist,
+  label, composition, and the About/Collections/Explore/Contact pages are
+  generated at build time from the project's Wikibase instance,
+  **[shira.wikibase.cloud](https://shira.wikibase.cloud)**.
+- **The front-page search is powered by Algolia.** The faceted home page
+  (`src/components/AlbumGrid.tsx`) queries an Algolia index that mirrors the
+  catalog (search across albums, artists, labels, compositions, sheet music with
+  type/performer/label facets).
 
-1. **Build time** — `src/lib/wikibase.ts` loads the whole album catalog in two
-   bulk SPARQL queries and Astro generates one static page per album.
-2. **Pagefind** indexes the generated HTML into `/pagefind/` and provides faceted,
-   typo-tolerant search that runs in the visitor's browser.
-3. **Deploy** — static output is published to Netlify. Because the data is baked in
-   at build time, a Wikibase edit appears on the site after the next **rebuild**
-   (trigger a Netlify build hook manually or on a schedule).
+Because the static pages bake Wikibase data in at build time, a Wikibase edit
+appears after the next **rebuild** (a Netlify deploy).
 
 ## Project layout
 
 | Path | Purpose |
 |------|---------|
-| `src/lib/wikibase.ts` | Wikibase client: SPARQL helper, `getEntity()`, property/class ID constants, and the memoized bulk loader `getAllAlbums()`. |
+| `src/lib/wikibase.ts` | Wikibase client: SPARQL helper, `getEntity()`, property/class ID constants, and the memoized bulk loaders (`getAllAlbums` / `getAllArtists` / `getAllLabels` / `getAllCompositions`). |
+| `src/pages/index.astro` | Home page — the Algolia-powered faceted search (`AlbumGrid`). |
 | `src/pages/album/[id].astro` | One static page per album, rendered from Wikibase. |
-| `src/pages/album/index.astro` | Album browse grid (client-paginated over the full catalog) + Pagefind search. |
-| `src/pages/artist/`, `label/`, `composition/` | Detail + index pages for each entity type. Artists/labels are reverse-indexed from the album cache; compositions merge the musical-work/song entities with album-tracklist membership (`getAllArtists` / `getAllLabels` / `getAllCompositions`). |
-| `src/components/PagefindSearch.astro` | Loads the Pagefind UI and wires up the `type` / `year` / `performer` / `label` filters. |
+| `src/pages/album/index.astro` | Album browse grid (client-paginated over the full catalog). |
+| `src/pages/artist/`, `label/`, `composition/` | Detail + index pages per entity type. Artists/labels are reverse-indexed from the album cache; compositions merge the musical-work/song entities with album-tracklist membership. |
+| `src/pages/{about,collections,explore,contact}.astro` | Static content pages. |
+| `src/components/AlbumGrid.tsx` | Algolia InstantSearch front page (React island). |
 | `src/layouts/BaseLayout.astro` | Shared HTML shell, SEO, header/footer. |
 
 ## Local development
 
 ```bash
 npm install
-npm run dev          # http://localhost:4321 — fast iteration
-```
-
-> ⚠️ **Search does not work under `npm run dev`.** Pagefind builds its index from
-> the *built* HTML, so `/pagefind/` only exists after a production build. To test
-> search, build and serve the static output:
-
-```bash
-npm run build        # astro build && pagefind --site dist
-npx serve dist       # or any static file server
+npm run dev          # http://localhost:4321
+npm run build        # full static build (all entity pages)
+npx serve dist       # preview the build (the Netlify adapter blocks `astro preview`)
 ```
 
 ### Faster builds while developing
 
-A full build generates ~6,355 album pages. To cap it during development, set
+A full build generates ~14k pages (6,355 albums + artists + labels +
+compositions). To cap the per-type page count during development, set
 `ALBUM_LIMIT`:
 
 ```bash
@@ -76,6 +63,7 @@ Albums are items with `instance of` (P39) → **Q4 (album)**. Key properties:
 | P20 | record label | | P68 | Freedman Album ID |
 | P110 | tracklist (item; qualifiers P104 ordinal, P7 title, P13 duration) | | P160 | release cover (image URL) |
 | P28 | Spotify album ID | | P30 | YouTube playlist ID |
+| P162 | Dartmouth Jewish Sound Archive link | | P163 | Recorded Sound Archives (RSA) link |
 
 ### SPARQL gotchas (already handled in `wikibase.ts`)
 
@@ -109,15 +97,13 @@ is **Internet Archive → Discogs (P160) → placeholder**.
    ```
    Review `ia-matches.csv`, then add the good `iaIdentifier` values to each album.
 
+## Search index (Algolia)
+
+The front page reads the Algolia index `dev_JewishMusic` (app `ZLPYTBTZ4R`),
+configured in `src/components/AlbumGrid.tsx`. Keeping that index in sync with
+Wikibase is a separate pipeline (outside this repo).
+
 ## Tech stack
 
-Astro 6 · React 19 (islands) · Tailwind CSS 4 · Pagefind · Netlify adapter.
-
-## Status & roadmap
-
-- [x] Wikibase client + bulk loader
-- [x] Static album detail pages from Wikibase
-- [x] Album browse + Pagefind search (Algolia removed from the album flow)
-- [x] Artist / composition / label pages (reverse-indexed from the album cache)
-- [ ] Netlify build hook for rebuild-on-edit (optionally nightly)
-- [ ] Remove remaining Algolia code (`AlbumGrid.tsx`, `algoliasearch`, `react-instantsearch`)
+Astro 6 · React 19 (islands) · Tailwind CSS 4 (pinned 4.1.x) · Algolia
+InstantSearch · Netlify adapter.

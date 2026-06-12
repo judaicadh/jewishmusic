@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && pagefind --site dist",
+    "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
     "postinstall": "flowbite-react build"
@@ -37,8 +37,5 @@
     "react-dom": "^19.1.0",
     "react-instantsearch": "^7.16.0",
     "tailwindcss": "4.1.11"
-  },
-  "devDependencies": {
-    "pagefind": "^1.5.2"
   }
 }

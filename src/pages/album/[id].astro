@@ -48,25 +48,12 @@ const externalLinks = [
 ---
 
 <BaseLayout title={pageTitle}>
-  <section
-    class="bg-white py-8 antialiased dark:bg-gray-950 md:py-12"
-    data-pagefind-body
-    data-pagefind-meta={`title:${pageTitle}`}
-  >
-    {/* Pagefind facets (indexed, not rendered) */}
-    <span hidden data-pagefind-filter="type:Album"></span>
-    {pubYear && <span hidden data-pagefind-filter={`year:${pubYear}`}></span>}
-    {album.performers.map((p) => (
-      <span hidden data-pagefind-filter={`performer:${p.label}`}></span>
-    ))}
-    {album.recordLabels.map((l) => (
-      <span hidden data-pagefind-filter={`label:${l.label}`}></span>
-    ))}
+  <section class="bg-white py-8 antialiased dark:bg-gray-950 md:py-12">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="grid gap-10 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
         <aside class="space-y-5">
           <div class="overflow-hidden rounded-3xl border border-gray-200 bg-gray-50 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <img src={coverImage} alt={pageTitle} data-pagefind-meta="image[src]" class="aspect-square w-full object-cover" />
+            <img src={coverImage} alt={pageTitle} class="aspect-square w-full object-cover" />
           </div>
 
           {iaEmbed && (
