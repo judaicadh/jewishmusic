@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// NOTE: Replace every [PLACEHOLDER] with real contact details before launch.
+const email = '[PLACEHOLDER: contact email]';
+---
+
+<BaseLayout title="Contact">
+  <section class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">Contact</p>
+    <h1 class="mt-2 text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
+      Get in touch
+    </h1>
+    <p class="mt-6 text-lg leading-8 text-gray-700 dark:text-gray-300">
+      Shira is maintained by Judaica Digital Humanities at the Penn Libraries. We
+      welcome questions, corrections, and collaboration.
+    </p>
+
+    <div class="mt-10 space-y-8 text-gray-700 dark:text-gray-300">
+      <div>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Email</h2>
+        <p class="mt-3 leading-7">
+          Reach the project team at
+          <a href={`mailto:${email}`} class="font-medium text-blue-700 hover:underline dark:text-blue-400">{email}</a>.
+        </p>
+      </div>
+
+      <div>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Suggest a correction</h2>
+        <p class="mt-3 leading-7">
+          Spot an error or have more to add about a recording? Because Shira is built on
+          open, structured data, every page links to its underlying record in the
+          <a href="https://shira.wikibase.cloud" class="font-medium text-blue-700 hover:underline dark:text-blue-400">Shira Wikibase</a>.
+          [PLACEHOLDER: note whether the public can request edits or an account, and how.]
+        </p>
+      </div>
+
+      <div>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Mailing address</h2>
+        <p class="mt-3 leading-7 whitespace-pre-line">[PLACEHOLDER: Judaica Digital Humanities
+University of Pennsylvania Libraries
+3420 Walnut Street
+Philadelphia, PA 19104]</p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

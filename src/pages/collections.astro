@@ -1,0 +1,106 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getAllAlbums, getAllArtists, getAllLabels, getAllCompositions } from '../lib/wikibase';
+
+// NOTE: Bracketed [PLACEHOLDER] text marks facts to confirm/replace before launch.
+// Add an entry to `otherCollections` for each non-Freedman Penn collection.
+const [albums, artists, labels, comps] = await Promise.all([
+  getAllAlbums(),
+  getAllArtists(),
+  getAllLabels(),
+  getAllCompositions(),
+]);
+
+const stats = [
+  { label: 'Albums', value: albums.size, href: '/album' },
+  { label: 'Recordings', value: 11170, href: '/composition' },
+  { label: 'Artists', value: artists.size, href: '/artist' },
+  { label: 'Compositions', value: comps.size, href: '/composition' },
+  { label: 'Record labels', value: labels.size, href: '/label' },
+];
+
+// Fill these in as the other Penn collections are described.
+const otherCollections: Array<{ name: string; blurb: string }> = [
+  { name: '[PLACEHOLDER: Collection name]', blurb: '[PLACEHOLDER: one–two sentence description of this Penn collection and what it adds.]' },
+  { name: '[PLACEHOLDER: Collection name]', blurb: '[PLACEHOLDER: one–two sentence description.]' },
+];
+
+const partners = [
+  { name: 'Dartmouth Jewish Sound Archive', href: 'https://djsa.dartmouth.edu', blurb: 'A partner archive of Jewish recorded sound; many Shira records link out to their holdings.' },
+  { name: 'Recorded Sound Archives (Florida Atlantic University)', href: 'https://rsa.fau.edu', blurb: 'The Judaica Sound Archives at FAU; linked from Shira records where matching recordings exist.' },
+];
+---
+
+<BaseLayout title="Collections">
+  <section class="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">Collections</p>
+    <h1 class="mt-2 text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
+      Jewish music collections at Penn
+    </h1>
+    <p class="mt-6 text-lg leading-8 text-gray-700 dark:text-gray-300">
+      Shira unites several of the Penn Libraries' Jewish music collections in one
+      catalog. The collections complement one another in language, genre, and format —
+      from 78&nbsp;rpm discs and LPs to compositions and sheet music.
+    </p>
+
+    <dl class="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      {stats.map((s) => (
+        <a href={s.href} class="rounded-3xl border border-gray-200 bg-white p-5 text-center shadow-sm hover:border-blue-400 dark:border-gray-800 dark:bg-gray-900">
+          <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{s.label}</dt>
+          <dd class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{s.value.toLocaleString()}</dd>
+        </a>
+      ))}
+    </dl>
+
+    <div class="mt-14 rounded-3xl border border-gray-200 bg-gray-50 p-8 dark:border-gray-800 dark:bg-gray-900">
+      <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">
+        The Robert and Molly Freedman Jewish Sound Archive
+      </h2>
+      <p class="mt-4 leading-7 text-gray-700 dark:text-gray-300">
+        The cornerstone of Shira is the Robert and Molly Freedman Jewish Sound Archive,
+        one of the foremost collections of recorded Jewish music. Assembled over
+        [PLACEHOLDER: decades / dates] and given to the University of Pennsylvania
+        Libraries, the archive documents Yiddish song, klezmer, cantorial and liturgical
+        music, Yiddish theater, Sephardic and Ladino traditions, and Israeli and Hebrew
+        popular music across thousands of commercial and field recordings.
+      </p>
+      <p class="mt-4 leading-7 text-gray-700 dark:text-gray-300">
+        [PLACEHOLDER: a sentence on Robert and Molly Freedman and the significance of
+        the collection.] Records originating in the Freedman archive carry their
+        Freedman catalog identifiers, linking Shira back to the archive's own finding aids.
+      </p>
+    </div>
+
+    <div class="mt-12">
+      <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Other Penn collections</h2>
+      <p class="mt-3 leading-7 text-gray-700 dark:text-gray-300">
+        Alongside the Freedman archive, Shira draws on additional Jewish music
+        collections held at Penn. [PLACEHOLDER: brief framing sentence.]
+      </p>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        {otherCollections.map((c) => (
+          <div class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{c.name}</h3>
+            <p class="mt-2 leading-7 text-gray-700 dark:text-gray-300">{c.blurb}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="mt-12">
+      <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Partner sound archives</h2>
+      <p class="mt-3 leading-7 text-gray-700 dark:text-gray-300">
+        Where a recording also lives in a partner archive, Shira links out so you can
+        listen or read more.
+      </p>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        {partners.map((p) => (
+          <a href={p.href} target="_blank" rel="noreferrer" class="block rounded-3xl border border-gray-200 bg-white p-6 shadow-sm hover:border-blue-400 dark:border-gray-800 dark:bg-gray-900">
+            <h3 class="text-lg font-semibold text-blue-700 dark:text-blue-400">{p.name} ↗</h3>
+            <p class="mt-2 leading-7 text-gray-700 dark:text-gray-300">{p.blurb}</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</BaseLayout>

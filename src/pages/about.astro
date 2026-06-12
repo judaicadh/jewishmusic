@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// NOTE: Bracketed [PLACEHOLDER] text marks facts to confirm/replace before launch.
+---
+
+<BaseLayout title="About">
+  <section class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">About</p>
+    <h1 class="mt-2 text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
+      Shira
+    </h1>
+    <p class="mt-6 text-lg leading-8 text-gray-700 dark:text-gray-300">
+      <em>Shira</em> — Hebrew for “song” — is a digital gateway to the Jewish music
+      collections held at the University of Pennsylvania Libraries. It brings together
+      recordings, performers, compositions, and record labels from several Penn
+      collections into a single, searchable catalog.
+    </p>
+
+    <div class="mt-10 space-y-8 text-gray-700 dark:text-gray-300">
+      <div>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">What you'll find here</h2>
+        <p class="mt-3 leading-7">
+          Shira spans more than 6,300 albums and over 11,000 individual recordings,
+          drawn from Penn's holdings of Jewish music in Yiddish, Hebrew, Ladino, and
+          other languages — from cantorial and liturgical music to klezmer, Yiddish
+          theater and folk song, Sephardic traditions, and Israeli popular music.
+          Every album, artist, composition, and label has its own page, cross-linked
+          so you can move from a recording to its performers, to the other albums they
+          appear on, and to the labels that released them.
+        </p>
+      </div>
+
+      <div>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Built on linked open data</h2>
+        <p class="mt-3 leading-7">
+          The catalog is powered by a community
+          <a href="https://shira.wikibase.cloud" class="font-medium text-blue-700 hover:underline dark:text-blue-400">Wikibase</a>
+          knowledge base, the same software family that underlies Wikidata. Each record
+          is structured, linked data that can be queried, reused, and connected to
+          identifiers in Discogs, MusicBrainz, and partner sound archives. Every page
+          on this site links back to its underlying data so the information stays open
+          and verifiable.
+        </p>
+      </div>
+
+      <div>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">A Judaica Digital Humanities project</h2>
+        <p class="mt-3 leading-7">
+          Shira is produced by
+          <a href="https://judaicadhpenn.org" class="font-medium text-blue-700 hover:underline dark:text-blue-400">Judaica Digital Humanities</a>
+          at the Penn Libraries. [PLACEHOLDER: one or two sentences on the team,
+          funding, and project goals.]
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-12 flex flex-wrap gap-4">
+      <a href="/collections" class="rounded-full bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800">Browse the collections</a>
+      <a href="/explore" class="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-800 hover:border-blue-400 dark:border-gray-700 dark:text-gray-200">Explore &amp; search</a>
+    </div>
+  </section>
+</BaseLayout>
