@@ -138,6 +138,48 @@ export type AlbumTrack = {
   duration?: string;
 };
 
+/**
+ * Sort key for a track's P104 "series ordinal", which comes in two schemes:
+ *   - side + track: "A1", "A2", "B1", "B2"  (78s / vinyl)
+ *   - plain number: "1", "2", "3"
+ * Returns [sideRank, trackNo]; side letters rank A<B<C… (multi-letter handled),
+ * plain numbers sort as side 0, and anything unparseable (e.g. "sides") sorts
+ * last so it falls back to query order.
+ */
+function ordinalKey(raw?: string): [number, number] {
+  const s = raw?.trim() ?? '';
+  const sided = s.match(/^([A-Za-z]+)\s*[-.]?\s*(\d+)/); // "A1", "B-2", "AA1"
+  if (sided) {
+    let sideRank = 0;
+    for (const ch of sided[1].toUpperCase()) sideRank = sideRank * 36 + (ch.charCodeAt(0) - 64);
+    return [sideRank, Number(sided[2])];
+  }
+  const num = s.match(/\d+/); // "1", "12", "3-7" → 3
+  if (num) return [0, Number(num[0])];
+  return [Number.MAX_SAFE_INTEGER, 0]; // non-numeric → end, query order
+}
+
+/**
+ * A tracklist statement can carry several P104 values (e.g. both "A1" and the
+ * junk label "sides"). Given the pipe-joined GROUP_CONCAT of them, pick the one
+ * that actually looks like an ordinal (side+number or a number), so sorting and
+ * display use "A1" rather than "sides".
+ */
+function bestOrdinal(concat?: string): string | undefined {
+  if (!concat) return undefined;
+  const tokens = concat.split('|').map((t) => t.trim()).filter(Boolean);
+  return tokens.find((t) => /^[A-Za-z]*\s*[-.]?\s*\d+/.test(t)) ?? tokens[0];
+}
+
+/** Order tracks by ordinal scheme, falling back to original query order. */
+function sortTracks<T extends { rawOrdinal?: string; _i: number }>(rows: T[]): T[] {
+  return rows.slice().sort((a, b) => {
+    const [as, at] = ordinalKey(a.rawOrdinal);
+    const [bs, bt] = ordinalKey(b.rawOrdinal);
+    return as - bs || at - bt || a._i - b._i;
+  });
+}
+
 export type Album = {
   id: string;
   title: string;
@@ -222,7 +264,7 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
     `),
     sparql(`
       SELECT ?s ?track (SAMPLE(?tl) AS ?label) (SAMPLE(?qt) AS ?qtitle)
-             (SAMPLE(?ord) AS ?ordinal) (SAMPLE(?dur) AS ?duration) WHERE {
+             (GROUP_CONCAT(DISTINCT ?ord; separator="|") AS ?ordinal) (SAMPLE(?dur) AS ?duration) WHERE {
         ?s wdt:${P.instanceOf} wd:${CLASS.album} ; p:${P.tracklist} ?st .
         ?st ps:${P.tracklist} ?track .
         OPTIONAL { ?st pq:${P.seriesOrdinal} ?ord }
@@ -261,24 +303,21 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
     const id = toId(r.s)!;
     (byAlbum.get(id) ?? byAlbum.set(id, []).get(id)!).push(r);
   }
-  const parseOrd = (s?: string) => {
-    const m = s?.match(/\d+/);
-    return m ? Number(m[0]) : undefined;
-  };
   for (const [id, rows] of byAlbum) {
     const album = albums.get(id);
     if (!album) continue;
-    album.tracks = rows
-      .map((r, i) => ({
+    const mapped = rows.map((r, i) => {
+      const raw = bestOrdinal(r.ordinal);
+      return {
         id: toId(r.track),
         label: r.qtitle || r.label || `Track ${i + 1}`,
-        ordinal: parseOrd(r.ordinal) ?? i + 1,
-        rawOrdinal: r.ordinal,
+        ordinal: ordinalKey(raw)[1] || i + 1,
+        rawOrdinal: raw,
         duration: r.duration,
         _i: i,
-      }))
-      .sort((a, b) => a.ordinal - b.ordinal || a._i - b._i)
-      .map(({ _i, ...t }) => t);
+      };
+    });
+    album.tracks = sortTracks(mapped).map(({ _i, ...t }) => t);
   }
 
   return albums;
@@ -483,10 +522,10 @@ export async function getAlbum(qid: string): Promise<Album | null> {
   // Group by statement: P104 ("series ordinal") is sometimes multi-valued and
   // non-numeric (e.g. "3-7", "sides"), so a plain join double-counts tracks and
   // an xsd:integer ORDER BY breaks. SAMPLE collapses each statement to one row;
-  // we sort in JS by any leading integer, falling back to query order.
+  // we order in JS via sortTracks (handles "A1/B2" sides and plain numbers).
   const trackRows = await sparql(`
     SELECT ?track (SAMPLE(?trackLabel) AS ?label) (SAMPLE(?qtitle) AS ?qt)
-           (SAMPLE(?ord) AS ?ordinal) (SAMPLE(?dur) AS ?duration) WHERE {
+           (GROUP_CONCAT(DISTINCT ?ord; separator="|") AS ?ordinal) (SAMPLE(?dur) AS ?duration) WHERE {
       wd:${qid} p:${P.tracklist} ?st .
       ?st ps:${P.tracklist} ?track .
       OPTIONAL { ?st pq:${P.seriesOrdinal} ?ord }
@@ -506,21 +545,18 @@ export async function getAlbum(qid: string): Promise<Album | null> {
     .filter((r) => r.prop === labelProp)
     .map((r) => ({ id: toId(r.item), label: r.itemLabel! }));
 
-  const parseOrd = (s?: string) => {
-    const m = s?.match(/\d+/);
-    return m ? Number(m[0]) : undefined;
-  };
-  const tracks: AlbumTrack[] = trackRows
-    .map((r, i) => ({
+  const mapped = trackRows.map((r, i) => {
+    const raw = bestOrdinal(r.ordinal);
+    return {
       id: toId(r.track),
       label: r.qt || r.label || `Track ${i + 1}`,
-      ordinal: parseOrd(r.ordinal) ?? i + 1,
-      rawOrdinal: r.ordinal,
+      ordinal: ordinalKey(raw)[1] || i + 1,
+      rawOrdinal: raw,
       duration: r.duration,
       _i: i,
-    }))
-    .sort((a, b) => a.ordinal - b.ordinal || a._i - b._i)
-    .map(({ _i, ...t }) => t);
+    };
+  });
+  const tracks: AlbumTrack[] = sortTracks(mapped).map(({ _i, ...t }) => t);
 
   const title =
     scalar?.title || scalar?.freedmanTitle || (await getEntity(qid))?.labels?.en?.value || qid;
