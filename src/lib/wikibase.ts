@@ -116,6 +116,32 @@ export type WikibaseEntity = {
   claims: Record<string, any[]>;
 };
 
+/**
+ * Resolve entity labels via the Wikibase action API (wbgetentities). This is
+ * authoritative and used as a fallback when the SPARQL query-service index lags
+ * the wiki (some items have a label in the wiki but no rdfs:label in SPARQL).
+ * Prefers English, falls back to any language. Batches of 50.
+ */
+export async function resolveNames(ids: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const unique = [...new Set(ids)].filter(Boolean);
+  for (let i = 0; i < unique.length; i += 50) {
+    const batch = unique.slice(i, i + 50);
+    const url = `${WIKIBASE_BASE}/w/api.php?action=wbgetentities&format=json&props=labels&ids=${batch.join('|')}`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'shira-music-site (https://music.judaicadhpenn.org)' },
+    });
+    if (!res.ok) continue;
+    const json = (await res.json()) as { entities?: Record<string, { labels?: Record<string, { value: string }> }> };
+    for (const [qid, e] of Object.entries(json.entities ?? {})) {
+      const labels = e.labels ?? {};
+      const name = labels.en?.value ?? Object.values(labels)[0]?.value;
+      if (name) out.set(qid, name);
+    }
+  }
+  return out;
+}
+
 /** Fetch a single entity's full JSON via Special:EntityData. */
 export async function getEntity(qid: string): Promise<WikibaseEntity | null> {
   const res = await fetch(`${WIKIBASE_BASE}/wiki/Special:EntityData/${qid}.json`, {
@@ -228,8 +254,10 @@ function parseRefs(concat?: string): Array<{ id?: string; label: string }> {
     if (idx === -1) continue;
     const id = toId(part.slice(0, idx));
     const label = part.slice(idx + 2);
-    if (!label || (id && seen.has(id))) continue;
-    if (id) seen.add(id);
+    // Keep refs whose SPARQL label is empty (id present) — they get resolved
+    // via the entity API afterwards, since the SPARQL index can lag the wiki.
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
     out.push({ id, label });
   }
   return out;
@@ -259,10 +287,12 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
         OPTIONAL { ?s wdt:${P.youtubePlaylistId} ?youtube }
         OPTIONAL { ?s wdt:${P.dartmouthLink} ?dartmouth }
         OPTIONAL { ?s wdt:${P.rsaLink} ?rsa }
-        OPTIONAL { ?s wdt:${P.performer} ?perf . ?perf rdfs:label ?pl FILTER(LANG(?pl)="en")
-                   BIND(CONCAT(STR(?perf),"::",?pl) AS ?perfStr) }
-        OPTIONAL { ?s wdt:${P.recordLabel} ?lab . ?lab rdfs:label ?ll FILTER(LANG(?ll)="en")
-                   BIND(CONCAT(STR(?lab),"::",?ll) AS ?labelStr) }
+        OPTIONAL { ?s wdt:${P.performer} ?perf .
+                   OPTIONAL { ?perf rdfs:label ?pl FILTER(LANG(?pl)="en") }
+                   BIND(CONCAT(STR(?perf),"::",COALESCE(?pl,"")) AS ?perfStr) }
+        OPTIONAL { ?s wdt:${P.recordLabel} ?lab .
+                   OPTIONAL { ?lab rdfs:label ?ll FILTER(LANG(?ll)="en") }
+                   BIND(CONCAT(STR(?lab),"::",COALESCE(?ll,"")) AS ?labelStr) }
       } GROUP BY ?s
     `),
     sparql(`
@@ -321,6 +351,24 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
       };
     });
     album.tracks = sortTracks(mapped).map(({ _i, ...t }) => t);
+  }
+
+  // Backfill performer/label names that SPARQL didn't return (stale index) from
+  // the authoritative entity API, then drop any that are still truly nameless.
+  const missing = new Set<string>();
+  for (const a of albums.values())
+    for (const ref of [...a.performers, ...a.recordLabels])
+      if (ref.id && !ref.label) missing.add(ref.id);
+  if (missing.size) {
+    const names = await resolveNames([...missing]);
+    const fill = (refs: Array<{ id?: string; label: string }>) =>
+      refs
+        .map((r) => (r.label || !r.id ? r : { ...r, label: names.get(r.id) ?? '' }))
+        .filter((r) => r.label);
+    for (const a of albums.values()) {
+      a.performers = fill(a.performers);
+      a.recordLabels = fill(a.recordLabels);
+    }
   }
 
   return albums;
