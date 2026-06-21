@@ -1,4 +1,4 @@
-import React, { Fragment, useMemo, useState } from 'react';
+import React, { Fragment, useEffect, useMemo, useState } from 'react';
 import {
     Configure,
     Hits,
@@ -177,9 +177,10 @@ function EmptyState() {
     );
 }
 
-function ResultCard({ hit, mode }: { hit: HitType; mode: FilterMode }) {
+function ResultCard({ hit, mode, covers }: { hit: HitType; mode: FilterMode; covers: Record<string, string> }) {
     const title = hit.title ?? hit.freedmanTitle ?? hit.label ?? 'Untitled';
-    const image = hit.release_cover?.trim();
+    // Algolia doesn't carry the cover; fall back to the Wikibase P160 map by id.
+    const image = hit.release_cover?.trim() || covers[hit.objectID];
     const primaryMeta = getPrimaryMeta(hit);
     const secondaryMeta = getSecondaryMeta(hit);
     const routePrefix = getRoutePrefix(mode);
@@ -312,6 +313,14 @@ runDevAssertions();
 export default function AlbumGrid() {
     const [filterMode, setFilterMode] = useState<FilterMode>('Album');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [covers, setCovers] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        fetch('/album-covers.json')
+            .then((r) => (r.ok ? r.json() : {}))
+            .then(setCovers)
+            .catch(() => {});
+    }, []);
 
     return (
         <InstantSearch searchClient={searchClient} indexName="dev_JewishMusic">
@@ -402,7 +411,7 @@ export default function AlbumGrid() {
                         ) : (
                             <>
                                 <Hits
-                                    hitComponent={({ hit }) => <ResultCard hit={hit as HitType} mode={filterMode} />}
+                                    hitComponent={({ hit }) => <ResultCard hit={hit as HitType} mode={filterMode} covers={covers} />}
                                     classNames={{
                                         list: 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
                                         emptyRoot: 'grid grid-cols-1',
