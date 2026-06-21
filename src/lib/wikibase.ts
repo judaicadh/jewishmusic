@@ -239,6 +239,7 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
   const [scalarRows, trackRows] = await Promise.all([
     sparql(`
       SELECT ?s (SAMPLE(?title) AS ?title) (SAMPLE(?freedmanTitle) AS ?freedmanTitle)
+             (SAMPLE(?lbl) AS ?lbl)
              (SAMPLE(?catalog) AS ?catalog) (SAMPLE(?pubDate) AS ?pubDate)
              (SAMPLE(?discogs) AS ?discogs) (SAMPLE(?freedmanId) AS ?freedmanId)
              (SAMPLE(?cover) AS ?cover) (SAMPLE(?spotify) AS ?spotify) (SAMPLE(?youtube) AS ?youtube)
@@ -248,6 +249,7 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
         ?s wdt:${P.instanceOf} wd:${CLASS.album} .
         OPTIONAL { ?s wdt:${P.title} ?title }
         OPTIONAL { ?s wdt:${P.freedmanTitle} ?freedmanTitle }
+        OPTIONAL { ?s rdfs:label ?lbl FILTER(LANG(?lbl)="en") }
         OPTIONAL { ?s wdt:${P.catalogNumber} ?catalog }
         OPTIONAL { ?s wdt:${P.publicationDate} ?pubDate }
         OPTIONAL { ?s wdt:${P.discogsReleaseId} ?discogs }
@@ -281,7 +283,7 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
     const id = toId(r.s)!;
     albums.set(id, {
       id,
-      title: r.title || r.freedmanTitle || id,
+      title: r.title || r.freedmanTitle || r.lbl || id,
       freedmanTitle: r.freedmanTitle,
       catalogNumber: r.catalog,
       publicationDate: r.pubDate,
