@@ -36,6 +36,8 @@ type HitType = {
     objectID: string;
     title?: string;
     freedmanTitle?: string;
+    // Artists, labels and compositions store their name here (not `title`).
+    label?: string;
     release_cover?: string;
     typeLabel?: string;
     performer?: EntityRef | EntityRef[];
@@ -176,7 +178,7 @@ function EmptyState() {
 }
 
 function ResultCard({ hit, mode }: { hit: HitType; mode: FilterMode }) {
-    const title = hit.title ?? hit.freedmanTitle ?? 'Untitled';
+    const title = hit.title ?? hit.freedmanTitle ?? hit.label ?? 'Untitled';
     const image = hit.release_cover?.trim();
     const primaryMeta = getPrimaryMeta(hit);
     const secondaryMeta = getSecondaryMeta(hit);
