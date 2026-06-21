@@ -38,9 +38,29 @@ const entityUrl = `https://shira.wikibase.cloud/wiki/Item:${composition.id}`;
       </div>
     )}
 
-    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-      {composition.appearsOn.length > 0 ? 'Appears on' : 'Recordings'}
-    </h2>
+    {composition.recordings.length > 0 && (
+      <div class="mb-10">
+        <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+          Recordings <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({composition.recordings.length})</span>
+        </h2>
+        <ul class="space-y-2">
+          {composition.recordings.map((rec) => (
+            <li class="rounded-2xl border border-gray-100 px-4 py-3 dark:border-gray-800">
+              <div class="flex items-center justify-between gap-4">
+                <span class="min-w-0 truncate font-medium text-gray-900 dark:text-white">{rec.title}</span>
+                <div class="flex shrink-0 flex-wrap justify-end gap-1.5 text-sm">
+                  {rec.albums.map((al) => (
+                    <a href={`/album/${al.id}`} class="rounded-full bg-gray-100 px-2.5 py-0.5 text-gray-700 hover:text-blue-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:text-blue-300">{al.title}</a>
+                  ))}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Appears on</h2>
     {composition.appearsOn.length > 0 ? (
       <ul class="space-y-2">
         {composition.appearsOn.map((a) => (
@@ -52,8 +72,10 @@ const entityUrl = `https://shira.wikibase.cloud/wiki/Item:${composition.id}`;
           </li>
         ))}
       </ul>
-    ) : (
+    ) : composition.recordings.length === 0 ? (
       <p class="text-gray-600 dark:text-gray-400">No catalogued recordings of this work yet.</p>
+    ) : (
+      <p class="text-gray-600 dark:text-gray-400">See the recordings above for where to hear this work.</p>
     )}
   </section>
 </BaseLayout>

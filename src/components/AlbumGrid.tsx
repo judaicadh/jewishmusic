@@ -388,24 +388,37 @@ export default function AlbumGrid() {
                             </div>
                         </div>
 
-                        <Hits
-                            hitComponent={({ hit }) => <ResultCard hit={hit as HitType} mode={filterMode} />}
-                            classNames={{
-                                list: 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
-                                emptyRoot: 'grid grid-cols-1',
-                            }}
-                            emptyComponent={EmptyState}
-                        />
+                        {filterMode === 'Sheet Music' ? (
+                            <div className="flex flex-col items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03] px-6 py-20 text-center">
+                                <FileMusic className="h-10 w-10 text-white/40" />
+                                <h3 className="mt-4 text-xl font-semibold text-white">Sheet music — coming soon</h3>
+                                <p className="mt-2 max-w-md text-sm text-white/50">
+                                    Scores from the collection aren’t available to browse here yet. In the
+                                    meantime, explore albums, artists, labels, and compositions.
+                                </p>
+                            </div>
+                        ) : (
+                            <>
+                                <Hits
+                                    hitComponent={({ hit }) => <ResultCard hit={hit as HitType} mode={filterMode} />}
+                                    classNames={{
+                                        list: 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+                                        emptyRoot: 'grid grid-cols-1',
+                                    }}
+                                    emptyComponent={EmptyState}
+                                />
 
-                        <Pagination
-                            classNames={{
-                                root: 'mt-10 flex justify-center',
-                                list: 'inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] p-2 backdrop-blur',
-                                link: 'flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-sm text-white/70 transition hover:bg-white/[0.08] hover:text-white',
-                                selectedItem: 'rounded-full bg-white text-black',
-                                disabledItem: 'pointer-events-none opacity-30',
-                            }}
-                        />
+                                <Pagination
+                                    classNames={{
+                                        root: 'mt-10 flex justify-center',
+                                        list: 'inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] p-2 backdrop-blur',
+                                        link: 'flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-sm text-white/70 transition hover:bg-white/[0.08] hover:text-white',
+                                        selectedItem: 'rounded-full bg-white text-black',
+                                        disabledItem: 'pointer-events-none opacity-30',
+                                    }}
+                                />
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

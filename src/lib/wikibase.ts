@@ -29,6 +29,7 @@ export const P = {
   freedmanAlbumId: 'P68',
   partOf: 'P1',
   formOfWork: 'P24',
+  recordingOf: 'P118',
   releaseCover: 'P160',
   image: 'P22',
   spotifyAlbumId: 'P28',
@@ -354,6 +355,8 @@ export type Composition = {
   type?: string;
   performers: Array<{ id?: string; label: string }>;
   appearsOn: Array<{ albumId: string; albumTitle: string; ordinal: number }>;
+  /** Audio-track recordings of this work (reverse P118), with their album(s). */
+  recordings: Array<{ id: string; title: string; albums: AlbumRef[] }>;
 };
 
 let _artists: Promise<Map<string, Artist>> | null = null;
@@ -434,7 +437,7 @@ async function buildCompositions(): Promise<Map<string, Composition>> {
   // A work that appears in no tracklist still gets a page; a tracklist entry that
   // isn't a catalogued work still gets one too.
   const valuesClause = WORK_CLASSES.map((c) => `wd:${c}`).join(' ');
-  const [albums, workRows] = await Promise.all([
+  const [albums, workRows, recRows] = await Promise.all([
     getAllAlbums(),
     sparql(`
       SELECT ?s (SAMPLE(?title) AS ?title) (SAMPLE(?lbl) AS ?lbl) (SAMPLE(?clsL) AS ?type)
@@ -447,6 +450,14 @@ async function buildCompositions(): Promise<Map<string, Composition>> {
                    BIND(CONCAT(STR(?p),"::",?pl) AS ?perfStr) }
       } GROUP BY ?s
     `),
+    // Audio-track recordings of each work: ?rec "recording or performance of" ?work.
+    sparql(`
+      SELECT ?work ?rec (SAMPLE(?recLabel) AS ?recTitle) WHERE {
+        ?rec wdt:${P.recordingOf} ?work .
+        ?work wdt:${P.instanceOf} ?c . VALUES ?c { ${valuesClause} }
+        OPTIONAL { ?rec rdfs:label ?recLabel FILTER(LANG(?recLabel)="en") }
+      } GROUP BY ?work ?rec
+    `),
   ]);
 
   const comps = new Map<string, Composition>();
@@ -458,24 +469,43 @@ async function buildCompositions(): Promise<Map<string, Composition>> {
       type: r.type,
       performers: parseRefs(r.performers),
       appearsOn: [],
+      recordings: [],
     });
   }
 
+  // Map every tracklist entry (audio track or work) to the albums that list it.
+  const trackToAlbums = new Map<string, AlbumRef[]>();
   for (const album of albums.values()) {
     for (const track of album.tracks) {
       if (!track.id) continue;
       let comp = comps.get(track.id);
       if (!comp) {
-        comp = { id: track.id, title: track.label, performers: [], appearsOn: [] };
+        comp = { id: track.id, title: track.label, performers: [], appearsOn: [], recordings: [] };
         comps.set(track.id, comp);
       } else if (comp.title === comp.id) {
         comp.title = track.label;
       }
       comp.appearsOn.push({ albumId: album.id, albumTitle: album.title, ordinal: track.ordinal });
+      (trackToAlbums.get(track.id) ?? trackToAlbums.set(track.id, []).get(track.id)!).push(albumRef(album));
     }
   }
 
-  for (const c of comps.values()) c.appearsOn.sort((a, b) => a.albumTitle.localeCompare(b.albumTitle));
+  // Attach each work's recordings (with the album each recording appears on).
+  for (const r of recRows) {
+    const work = comps.get(toId(r.work)!);
+    const recId = toId(r.rec);
+    if (!work || !recId) continue;
+    work.recordings.push({
+      id: recId,
+      title: r.recTitle || recId,
+      albums: trackToAlbums.get(recId) ?? [],
+    });
+  }
+
+  for (const c of comps.values()) {
+    c.appearsOn.sort((a, b) => a.albumTitle.localeCompare(b.albumTitle));
+    c.recordings.sort((a, b) => a.title.localeCompare(b.title));
+  }
   return comps;
 }
 

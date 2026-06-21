@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getAllCompositions } from '../../lib/wikibase';
 
 const compositions = [...(await getAllCompositions()).values()]
-  .map((c) => ({ id: c.id, title: c.title, count: c.appearsOn.length }))
+  .map((c) => ({ id: c.id, title: c.title, count: c.appearsOn.length + c.recordings.length }))
   .sort((a, b) => a.title.localeCompare(b.title));
 ---
 
