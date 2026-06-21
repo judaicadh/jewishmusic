@@ -59,11 +59,13 @@ const modes: Array<{
     { label: 'Sheet Music', icon: FileMusic },
 ];
 
-const facetFiltersByMode: Record<FilterMode, string[]> = {
+// A nested array means OR within a category (e.g. a composition is a musical
+// work OR a song OR a musical work/composition).
+const facetFiltersByMode: Record<FilterMode, Array<string | string[]>> = {
     Album: ['typeLabel:album'],
     Label: ['typeLabel:Record Label'],
     Artist: ['typeLabel:human'],
-    Composition: ['typeLabel:musical work/composition'],
+    Composition: [['typeLabel:musical work', 'typeLabel:musical work/composition', 'typeLabel:song']],
     'Sheet Music': ['typeLabel:sheet music'],
 };
 
