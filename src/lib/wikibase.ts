@@ -445,7 +445,8 @@ async function buildArtists(): Promise<Map<string, Artist>> {
       artist.albums.push(albumRef(album));
     }
   }
-  for (const a of artists.values()) a.albums.sort((x, y) => x.title.localeCompare(y.title));
+  for (const a of artists.values())
+    a.albums.sort((x, y) => (y.cover ? 1 : 0) - (x.cover ? 1 : 0) || x.title.localeCompare(y.title));
   return artists;
 }
 
@@ -471,7 +472,8 @@ async function buildLabels(): Promise<Map<string, Label>> {
       label.albums.push(albumRef(album));
     }
   }
-  for (const l of labels.values()) l.albums.sort((x, y) => x.title.localeCompare(y.title));
+  for (const l of labels.values())
+    l.albums.sort((x, y) => (y.cover ? 1 : 0) - (x.cover ? 1 : 0) || x.title.localeCompare(y.title));
   return labels;
 }
 

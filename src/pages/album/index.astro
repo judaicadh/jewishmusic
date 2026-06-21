@@ -5,8 +5,9 @@ import { getAllAlbums } from '../../lib/wikibase';
 // A compact, sorted list of every album for client-side paging. Full-text
 // search lives on the home page (Algolia); this is the browse-all view.
 const albums = [...(await getAllAlbums()).values()]
-  .map((a) => ({ id: a.id, title: a.title, cover: a.cover ?? '/placeholder.jpg' }))
-  .sort((a, b) => a.title.localeCompare(b.title));
+  .map((a) => ({ id: a.id, title: a.title, cover: a.cover }))
+  // Albums with cover art first, then alphabetical.
+  .sort((a, b) => (b.cover ? 1 : 0) - (a.cover ? 1 : 0) || a.title.localeCompare(b.title));
 ---
 
 <BaseLayout title="Albums">
@@ -55,7 +56,7 @@ const albums = [...(await getAllAlbums()).values()]
           (a) => `
         <a href="/album/${a.id}" class="group block">
           <div class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
-            <img src="${a.cover}" alt="" loading="lazy" class="aspect-square w-full object-cover transition group-hover:scale-105" />
+            <img src="${a.cover || '/placeholder.jpg'}" alt="" loading="lazy" class="aspect-square w-full object-cover transition group-hover:scale-105" />
           </div>
           <p class="mt-2 line-clamp-2 text-sm font-medium text-gray-800 dark:text-gray-200">${a.title}</p>
         </a>`
