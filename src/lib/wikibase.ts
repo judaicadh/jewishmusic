@@ -445,6 +445,31 @@ async function buildArtists(): Promise<Map<string, Artist>> {
       artist.albums.push(albumRef(album));
     }
   }
+
+  // Include every artist/human entity, not only those that perform on an album,
+  // so the front page's Artist category never links to a missing page. Names
+  // absent from the (stale) SPARQL index are backfilled from the entity API.
+  const entityRows = await sparql(`
+    SELECT ?s (SAMPLE(?lbl) AS ?lbl) WHERE {
+      ?s wdt:${P.instanceOf} ?c . VALUES ?c { wd:${CLASS.artist} wd:${CLASS.human} }
+      OPTIONAL { ?s rdfs:label ?lbl FILTER(LANG(?lbl)="en") }
+    } GROUP BY ?s
+  `);
+  const needName: string[] = [];
+  for (const r of entityRows) {
+    const id = toId(r.s)!;
+    if (artists.has(id)) continue;
+    if (r.lbl) artists.set(id, { id, name: r.lbl, albums: [], discogsArtistId: discogs.get(id) });
+    else needName.push(id);
+  }
+  if (needName.length) {
+    const names = await resolveNames(needName);
+    for (const id of needName) {
+      const name = names.get(id);
+      if (name) artists.set(id, { id, name, albums: [], discogsArtistId: discogs.get(id) });
+    }
+  }
+
   for (const a of artists.values())
     a.albums.sort((x, y) => (y.cover ? 1 : 0) - (x.cover ? 1 : 0) || x.title.localeCompare(y.title));
   return artists;

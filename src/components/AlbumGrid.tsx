@@ -28,7 +28,10 @@ const searchClient = algoliasearch(
     'be46d26dfdb299f9bee9146b63c99c77'
 );
 
-type FilterMode = 'Album' | 'Label' | 'Artist' | 'Composition' | 'Sheet Music';
+type FilterMode = 'Album' | 'Label' | 'Artist' | 'Composition' | 'Audio Track' | 'Sheet Music';
+
+// typeLabels grouped under the "Audio Track" category.
+const AUDIO_TRACK_TYPES = new Set(['audio track', 'musical work', 'song']);
 
 type EntityRef = { label?: string };
 
@@ -46,6 +49,7 @@ type HitType = {
     composer?: EntityRef | EntityRef[];
     format?: string;
     date?: string;
+    wikibaseUrl?: string;
 };
 
 const modes: Array<{
@@ -56,14 +60,17 @@ const modes: Array<{
     { label: 'Artist', icon: UserRound },
     { label: 'Label', icon: Tag },
     { label: 'Composition', icon: Music4 },
+    { label: 'Audio Track', icon: AudioLines },
     { label: 'Sheet Music', icon: FileMusic },
 ];
 
-const facetFiltersByMode: Record<FilterMode, string[]> = {
+// A nested array means OR within a category.
+const facetFiltersByMode: Record<FilterMode, Array<string | string[]>> = {
     Album: ['typeLabel:album'],
     Label: ['typeLabel:Record Label'],
-    Artist: ['typeLabel:human'],
+    Artist: [['typeLabel:human', 'typeLabel:artist', 'typeLabel:choir']],
     Composition: ['typeLabel:musical work/composition'],
+    'Audio Track': [['typeLabel:audio track', 'typeLabel:musical work', 'typeLabel:song']],
     'Sheet Music': ['typeLabel:sheet music'],
 };
 
@@ -71,7 +78,11 @@ const typeBadgeStyles: Record<string, string> = {
     album: 'bg-white/15 text-white border-white/15',
     'Record Label': 'bg-yellow-400/15 text-yellow-100 border-yellow-300/20',
     human: 'bg-emerald-400/15 text-emerald-100 border-emerald-300/20',
+    artist: 'bg-emerald-400/15 text-emerald-100 border-emerald-300/20',
     'musical work/composition': 'bg-fuchsia-400/15 text-fuchsia-100 border-fuchsia-300/20',
+    'audio track': 'bg-sky-400/15 text-sky-100 border-sky-300/20',
+    'musical work': 'bg-sky-400/15 text-sky-100 border-sky-300/20',
+    song: 'bg-sky-400/15 text-sky-100 border-sky-300/20',
     'sheet music': 'bg-cyan-400/15 text-cyan-100 border-cyan-300/20',
 };
 
@@ -113,6 +124,7 @@ function getRoutePrefix(mode: FilterMode): string {
         Label: 'label',
         Artist: 'artist',
         Composition: 'composition',
+        'Audio Track': 'composition',
         'Sheet Music': 'sheet-music',
     }[mode];
 }
@@ -177,7 +189,17 @@ function EmptyState() {
     );
 }
 
-function ResultCard({ hit, mode, covers }: { hit: HitType; mode: FilterMode; covers: Record<string, string> }) {
+function ResultCard({
+    hit,
+    mode,
+    covers,
+    trackAlbums,
+}: {
+    hit: HitType;
+    mode: FilterMode;
+    covers: Record<string, string>;
+    trackAlbums: Record<string, string>;
+}) {
     const title = hit.title ?? hit.freedmanTitle ?? hit.label ?? 'Untitled';
     // Algolia doesn't carry the cover; fall back to the Wikibase P160 map by id.
     const image = hit.release_cover?.trim() || covers[hit.objectID];
@@ -185,9 +207,17 @@ function ResultCard({ hit, mode, covers }: { hit: HitType; mode: FilterMode; cov
     const secondaryMeta = getSecondaryMeta(hit);
     const routePrefix = getRoutePrefix(mode);
 
+    // Audio tracks have no detail page of their own — link to the album they're
+    // part of (Wikibase P1), falling back to the Wikibase item if unknown.
+    const href = AUDIO_TRACK_TYPES.has(hit.typeLabel ?? '')
+        ? trackAlbums[hit.objectID]
+            ? `/album/${trackAlbums[hit.objectID]}`
+            : hit.wikibaseUrl ?? `/${routePrefix}/${hit.objectID}`
+        : `/${routePrefix}/${hit.objectID}`;
+
     return (
         <a
-            href={`/${routePrefix}/${hit.objectID}`}
+            href={href}
             className="group block overflow-hidden rounded-[26px] border border-white/10 bg-white/[0.03] shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.05] hover:shadow-[0_20px_40px_rgba(0,0,0,0.35)]"
         >
             <div className="relative aspect-[0.85] overflow-hidden">
@@ -314,11 +344,16 @@ export default function AlbumGrid() {
     const [filterMode, setFilterMode] = useState<FilterMode>('Album');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [covers, setCovers] = useState<Record<string, string>>({});
+    const [trackAlbums, setTrackAlbums] = useState<Record<string, string>>({});
 
     useEffect(() => {
         fetch('/album-covers.json')
             .then((r) => (r.ok ? r.json() : {}))
             .then(setCovers)
+            .catch(() => {});
+        fetch('/track-albums.json')
+            .then((r) => (r.ok ? r.json() : {}))
+            .then(setTrackAlbums)
             .catch(() => {});
     }, []);
 
@@ -411,7 +446,7 @@ export default function AlbumGrid() {
                         ) : (
                             <>
                                 <Hits
-                                    hitComponent={({ hit }) => <ResultCard hit={hit as HitType} mode={filterMode} covers={covers} />}
+                                    hitComponent={({ hit }) => <ResultCard hit={hit as HitType} mode={filterMode} covers={covers} trackAlbums={trackAlbums} />}
                                     classNames={{
                                         list: 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
                                         emptyRoot: 'grid grid-cols-1',
