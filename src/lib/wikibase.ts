@@ -508,30 +508,26 @@ export function getAllCompositions(): Promise<Map<string, Composition>> {
 }
 
 async function buildCompositions(): Promise<Map<string, Composition>> {
-  // Two sources, merged by entity id:
-  //   1. Every musical-work / composition / song entity (title, type, performers).
-  //   2. Anything an album lists in its tracklist (so album → track links resolve).
-  // A work that appears in no tracklist still gets a page; a tracklist entry that
-  // isn't a catalogued work still gets one too.
-  const valuesClause = WORK_CLASSES.map((c) => `wd:${c}`).join(' ');
+  // A "composition" is strictly a musical work/composition entity (Q11). Audio
+  // tracks and songs are a separate category and do NOT get composition pages.
   const [albums, workRows, recRows] = await Promise.all([
     getAllAlbums(),
     sparql(`
       SELECT ?s (SAMPLE(?title) AS ?title) (SAMPLE(?lbl) AS ?lbl) (SAMPLE(?clsL) AS ?type)
              (GROUP_CONCAT(DISTINCT ?perfStr; separator="||") AS ?performers) WHERE {
-        ?s wdt:${P.instanceOf} ?c . VALUES ?c { ${valuesClause} }
-        ?c rdfs:label ?clsL FILTER(LANG(?clsL)="en")
+        ?s wdt:${P.instanceOf} wd:${CLASS.composition} .
+        OPTIONAL { wd:${CLASS.composition} rdfs:label ?clsL FILTER(LANG(?clsL)="en") }
         OPTIONAL { ?s wdt:${P.title} ?title }
         OPTIONAL { ?s rdfs:label ?lbl FILTER(LANG(?lbl)="en") }
         OPTIONAL { ?s wdt:${P.performer} ?p . ?p rdfs:label ?pl FILTER(LANG(?pl)="en")
                    BIND(CONCAT(STR(?p),"::",?pl) AS ?perfStr) }
       } GROUP BY ?s
     `),
-    // Audio-track recordings of each work: ?rec "recording or performance of" ?work.
+    // Audio-track recordings of each composition: ?rec "recording or performance of" ?work.
     sparql(`
       SELECT ?work ?rec (SAMPLE(?recLabel) AS ?recTitle) WHERE {
         ?rec wdt:${P.recordingOf} ?work .
-        ?work wdt:${P.instanceOf} ?c . VALUES ?c { ${valuesClause} }
+        ?work wdt:${P.instanceOf} wd:${CLASS.composition} .
         OPTIONAL { ?rec rdfs:label ?recLabel FILTER(LANG(?recLabel)="en") }
       } GROUP BY ?work ?rec
     `),
@@ -543,27 +539,22 @@ async function buildCompositions(): Promise<Map<string, Composition>> {
     comps.set(id, {
       id,
       title: r.title || r.lbl || id,
-      type: r.type,
+      type: r.type ?? 'Composition',
       performers: parseRefs(r.performers),
       appearsOn: [],
       recordings: [],
     });
   }
 
-  // Map every tracklist entry (audio track or work) to the albums that list it.
+  // Map every tracklist entry to the albums that list it (for recording links),
+  // and record where a composition itself appears in a tracklist.
   const trackToAlbums = new Map<string, AlbumRef[]>();
   for (const album of albums.values()) {
     for (const track of album.tracks) {
       if (!track.id) continue;
-      let comp = comps.get(track.id);
-      if (!comp) {
-        comp = { id: track.id, title: track.label, performers: [], appearsOn: [], recordings: [] };
-        comps.set(track.id, comp);
-      } else if (comp.title === comp.id) {
-        comp.title = track.label;
-      }
-      comp.appearsOn.push({ albumId: album.id, albumTitle: album.title, ordinal: track.ordinal });
       (trackToAlbums.get(track.id) ?? trackToAlbums.set(track.id, []).get(track.id)!).push(albumRef(album));
+      const comp = comps.get(track.id);
+      if (comp) comp.appearsOn.push({ albumId: album.id, albumTitle: album.title, ordinal: track.ordinal });
     }
   }
 
