@@ -194,11 +194,13 @@ function ResultCard({
     mode,
     covers,
     trackAlbums,
+    trackWorks,
 }: {
     hit: HitType;
     mode: FilterMode;
     covers: Record<string, string>;
     trackAlbums: Record<string, string>;
+    trackWorks: Record<string, string>;
 }) {
     const title = hit.title ?? hit.freedmanTitle ?? hit.label ?? 'Untitled';
     // Algolia doesn't carry the cover; fall back to the Wikibase P160 map by id.
@@ -207,12 +209,16 @@ function ResultCard({
     const secondaryMeta = getSecondaryMeta(hit);
     const routePrefix = getRoutePrefix(mode);
 
-    // Audio tracks have no detail page of their own — link to the album they're
-    // part of (Wikibase P1), falling back to the Wikibase item if unknown.
+    // Audio tracks have no detail page of their own. Link priority:
+    //   1. the composition it's a "recording or performance of" (P118),
+    //   2. otherwise the album it appears on.
+    // Never link out to Wikibase.
     const href = AUDIO_TRACK_TYPES.has(hit.typeLabel ?? '')
-        ? trackAlbums[hit.objectID]
-            ? `/album/${trackAlbums[hit.objectID]}`
-            : hit.wikibaseUrl ?? `/${routePrefix}/${hit.objectID}`
+        ? trackWorks[hit.objectID]
+            ? `/composition/${trackWorks[hit.objectID]}`
+            : trackAlbums[hit.objectID]
+                ? `/album/${trackAlbums[hit.objectID]}`
+                : undefined
         : `/${routePrefix}/${hit.objectID}`;
 
     return (
@@ -345,6 +351,7 @@ export default function AlbumGrid() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [covers, setCovers] = useState<Record<string, string>>({});
     const [trackAlbums, setTrackAlbums] = useState<Record<string, string>>({});
+    const [trackWorks, setTrackWorks] = useState<Record<string, string>>({});
 
     useEffect(() => {
         fetch('/album-covers.json')
@@ -354,6 +361,10 @@ export default function AlbumGrid() {
         fetch('/track-albums.json')
             .then((r) => (r.ok ? r.json() : {}))
             .then(setTrackAlbums)
+            .catch(() => {});
+        fetch('/track-works.json')
+            .then((r) => (r.ok ? r.json() : {}))
+            .then(setTrackWorks)
             .catch(() => {});
     }, []);
 
@@ -446,7 +457,7 @@ export default function AlbumGrid() {
                         ) : (
                             <>
                                 <Hits
-                                    hitComponent={({ hit }) => <ResultCard hit={hit as HitType} mode={filterMode} covers={covers} trackAlbums={trackAlbums} />}
+                                    hitComponent={({ hit }) => <ResultCard hit={hit as HitType} mode={filterMode} covers={covers} trackAlbums={trackAlbums} trackWorks={trackWorks} />}
                                     classNames={{
                                         list: 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
                                         emptyRoot: 'grid grid-cols-1',
