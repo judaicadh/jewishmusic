@@ -23,6 +23,21 @@ const entityUrl = `https://shira.wikibase.cloud/wiki/Item:${composition.id}`;
       <a href={entityUrl} target="_blank" rel="noreferrer" class="mt-3 inline-block text-sm font-medium text-blue-700 hover:underline dark:text-blue-400">View in Wikibase ({composition.id}) ↗</a>
     </header>
 
+    {composition.composers.length > 0 && (
+      <div class="mb-8">
+        <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Composer</h2>
+        <div class="flex flex-wrap gap-2">
+          {composition.composers.map((c) =>
+            c.id ? (
+              <a href={`/artist/${c.id}`} class="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-800 hover:border-blue-400 hover:text-blue-700 dark:border-gray-700 dark:text-gray-200">{c.label}</a>
+            ) : (
+              <span class="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-800 dark:border-gray-700 dark:text-gray-200">{c.label}</span>
+            )
+          )}
+        </div>
+      </div>
+    )}
+
     {composition.performers.length > 0 && (
       <div class="mb-8">
         <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Performers</h2>

@@ -102,6 +102,9 @@ function toLabelList(value?: EntityRef | EntityRef[]): string {
 }
 
 function getPrimaryMeta(hit: HitType): string {
+    if (hit.typeLabel === 'musical work/composition') {
+        return toLabelList(hit.composer) || toLabelList(hit.performer) || toLabelList(hit.creator) || 'Explore record';
+    }
     return (
         toLabelList(hit.performer) ||
         toLabelList(hit.composer) ||

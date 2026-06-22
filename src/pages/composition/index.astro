@@ -3,15 +3,20 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getAllCompositions } from '../../lib/wikibase';
 
 const compositions = [...(await getAllCompositions()).values()]
-  .map((c) => ({ id: c.id, title: c.title, count: c.appearsOn.length + c.recordings.length }))
+  .map((c) => ({
+    id: c.id,
+    title: c.title,
+    composer: c.composers.map((x) => x.label).join(', ') || undefined,
+    count: c.appearsOn.length + c.recordings.length,
+  }))
   .sort((a, b) => a.title.localeCompare(b.title));
 ---
 
 <BaseLayout title="Compositions">
   <section class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
     <div class="mb-8">
-      <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-3xl">Compositions &amp; tracks</h1>
-      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{compositions.length.toLocaleString()} tracks in the collection.</p>
+      <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-3xl">Compositions</h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{compositions.length.toLocaleString()} compositions in the collection.</p>
     </div>
 
     <ul id="list" class="grid grid-cols-1 gap-2 sm:grid-cols-2"></ul>
@@ -36,8 +41,11 @@ const compositions = [...(await getAllCompositions()).values()]
       list.innerHTML = slice
         .map(
           (it) => `<li><a href="/composition/${it.id}" class="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-4 py-2.5 hover:border-blue-400 dark:border-gray-800">
-            <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-200">${it.title}</span>
-            ${it.count > 1 ? `<span class="shrink-0 text-xs text-gray-400">${it.count}×</span>` : ''}
+            <div class="min-w-0">
+              <span class="block truncate text-sm font-medium text-gray-800 dark:text-gray-200">${it.title}</span>
+              ${it.composer ? `<span class="block truncate text-xs text-gray-500 dark:text-gray-400">${it.composer}</span>` : ''}
+            </div>
+            ${it.count > 0 ? `<span class="shrink-0 text-xs text-gray-400">${it.count} recording${it.count === 1 ? '' : 's'}</span>` : ''}
           </a></li>`
         )
         .join('');

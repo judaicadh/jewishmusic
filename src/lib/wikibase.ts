@@ -36,6 +36,7 @@ export const P = {
   youtubePlaylistId: 'P30',
   audio: 'P85',
   describedAtUrl: 'P4',
+  composedBy: 'P67',
   dartmouthLink: 'P162',
   rsaLink: 'P163',
   // Internet Archive identifier: property does NOT exist in the Wikibase yet.
@@ -403,6 +404,7 @@ export type Composition = {
   title: string;
   /** instance-of label for work entities (e.g. "musical work", "song"). */
   type?: string;
+  composers: Array<{ id?: string; label: string }>;
   performers: Array<{ id?: string; label: string }>;
   appearsOn: Array<{ albumId: string; albumTitle: string; ordinal: number }>;
   /** Audio-track recordings of this work (reverse P118), with their album(s). */
@@ -508,22 +510,24 @@ export function getAllCompositions(): Promise<Map<string, Composition>> {
 }
 
 async function buildCompositions(): Promise<Map<string, Composition>> {
-  // A "composition" is strictly a musical work/composition entity (Q11). Audio
-  // tracks and songs are a separate category and do NOT get composition pages.
+  // All Q11 ("musical work/composition") entities get composition pages.
+  // Composer (P67) is the primary credit shown, not performer.
   const [albums, workRows, recRows] = await Promise.all([
     getAllAlbums(),
     sparql(`
       SELECT ?s (SAMPLE(?title) AS ?title) (SAMPLE(?lbl) AS ?lbl) (SAMPLE(?clsL) AS ?type)
+             (GROUP_CONCAT(DISTINCT ?compStr; separator="||") AS ?composers)
              (GROUP_CONCAT(DISTINCT ?perfStr; separator="||") AS ?performers) WHERE {
         ?s wdt:${P.instanceOf} wd:${CLASS.composition} .
         OPTIONAL { wd:${CLASS.composition} rdfs:label ?clsL FILTER(LANG(?clsL)="en") }
         OPTIONAL { ?s wdt:${P.title} ?title }
         OPTIONAL { ?s rdfs:label ?lbl FILTER(LANG(?lbl)="en") }
+        OPTIONAL { ?s wdt:${P.composedBy} ?comp . ?comp rdfs:label ?cl FILTER(LANG(?cl)="en")
+                   BIND(CONCAT(STR(?comp),"::",?cl) AS ?compStr) }
         OPTIONAL { ?s wdt:${P.performer} ?p . ?p rdfs:label ?pl FILTER(LANG(?pl)="en")
                    BIND(CONCAT(STR(?p),"::",?pl) AS ?perfStr) }
       } GROUP BY ?s
     `),
-    // Audio-track recordings of each composition: ?rec "recording or performance of" ?work.
     sparql(`
       SELECT ?work ?rec (SAMPLE(?recLabel) AS ?recTitle) WHERE {
         ?rec wdt:${P.recordingOf} ?work .
@@ -540,6 +544,7 @@ async function buildCompositions(): Promise<Map<string, Composition>> {
       id,
       title: r.title || r.lbl || id,
       type: r.type ?? 'Composition',
+      composers: parseRefs(r.composers),
       performers: parseRefs(r.performers),
       appearsOn: [],
       recordings: [],
