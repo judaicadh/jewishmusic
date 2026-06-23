@@ -164,6 +164,8 @@ export type AlbumTrack = {
   /** The raw P104 value as stored (may be non-numeric, e.g. "3-7", "sides"). */
   rawOrdinal?: string;
   duration?: string;
+  /** Composition this track is a "recording or performance of" (P118). */
+  recordingOf?: { id: string; title: string };
 };
 
 /**
@@ -265,7 +267,7 @@ function parseRefs(concat?: string): Array<{ id?: string; label: string }> {
 }
 
 async function loadAllAlbums(): Promise<Map<string, Album>> {
-  const [scalarRows, trackRows] = await Promise.all([
+  const [scalarRows, trackRows, p118Rows] = await Promise.all([
     sparql(`
       SELECT ?s (SAMPLE(?title) AS ?title) (SAMPLE(?freedmanTitle) AS ?freedmanTitle)
              (SAMPLE(?lbl) AS ?lbl)
@@ -307,6 +309,14 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
         OPTIONAL { ?track rdfs:label ?tl FILTER(LANG(?tl)="en") }
       } GROUP BY ?s ?st ?track
     `),
+    // Track → composition links (P118 "recording or performance of").
+    sparql(`
+      SELECT ?track ?work (SAMPLE(?wTitle) AS ?workTitle) (SAMPLE(?wLbl) AS ?workLabel) WHERE {
+        ?track wdt:${P.recordingOf} ?work .
+        OPTIONAL { ?work wdt:${P.title} ?wTitle }
+        OPTIONAL { ?work rdfs:label ?wLbl FILTER(LANG(?wLbl)="en") }
+      } GROUP BY ?track ?work
+    `),
   ]);
 
   const albums = new Map<string, Album>();
@@ -331,6 +341,16 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
     });
   }
 
+  // Build track → composition map from P118 results.
+  const trackToWork = new Map<string, { id: string; title: string }>();
+  for (const r of p118Rows) {
+    const trackId = toId(r.track);
+    const workId = toId(r.work);
+    if (trackId && workId && !trackToWork.has(trackId)) {
+      trackToWork.set(trackId, { id: workId, title: r.workTitle || r.workLabel || workId });
+    }
+  }
+
   // Group tracks by album, then order each list (see getAlbum for the P104 caveat).
   const byAlbum = new Map<string, typeof trackRows>();
   for (const r of trackRows) {
@@ -342,12 +362,14 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
     if (!album) continue;
     const mapped = rows.map((r, i) => {
       const raw = bestOrdinal(r.ordinal);
+      const tid = toId(r.track);
       return {
-        id: toId(r.track),
+        id: tid,
         label: r.qtitle || r.label || `Track ${i + 1}`,
         ordinal: ordinalKey(raw)[1] || i + 1,
         rawOrdinal: raw,
         duration: r.duration,
+        recordingOf: tid ? trackToWork.get(tid) : undefined,
         _i: i,
       };
     });
