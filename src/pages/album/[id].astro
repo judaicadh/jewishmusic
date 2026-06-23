@@ -44,6 +44,13 @@ const coverImage = iaImage ?? album.cover ?? '/placeholder.jpg';
 const trackBadge = (raw: string | undefined, i: number) =>
   raw && /^[A-Za-z]{0,2}\s*-?\s*\d+$/.test(raw.trim()) ? raw.trim().toUpperCase() : String(i + 1);
 
+// Distinct compositions referenced by tracks on this album (via P118).
+const worksOnAlbum = [...new Map(
+  album.tracks
+    .filter((t) => t.recordingOf)
+    .map((t) => [t.recordingOf!.id, t.recordingOf!])
+).values()];
+
 // External archive / listen links, in display order.
 const externalLinks = [
   album.dartmouthUrl && { label: 'Dartmouth Jewish Sound Archive', href: album.dartmouthUrl },
@@ -53,7 +60,7 @@ const externalLinks = [
 ---
 
 <BaseLayout title={pageTitle}>
-  <section class="bg-white py-8 antialiased dark:bg-gray-950 md:py-12">
+  <section class="bg-white py-8 antialiased dark:bg-gray-950 md:py-12" data-pagefind-body data-pagefind-meta={`type:Album, cover:${coverImage}`} data-pagefind-filter="type:Album">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="grid gap-10 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
         <aside class="space-y-5">
@@ -232,6 +239,25 @@ const externalLinks = [
                   )}
                 </dl>
               </section>
+
+              {worksOnAlbum.length > 0 && (
+                <section class="rounded-3xl border border-emerald-100 bg-emerald-50/50 p-6 shadow-sm dark:border-emerald-900 dark:bg-emerald-950/30">
+                  <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Works on this album</h2>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Compositions performed on this release</p>
+                  <ul class="mt-4 space-y-2">
+                    {worksOnAlbum.map((w) => (
+                      <li>
+                        <a href={`/composition/${w.id}`} class="flex items-center gap-2.5 rounded-xl border border-emerald-200/60 bg-white px-3 py-2.5 transition hover:border-emerald-400 dark:border-emerald-800 dark:bg-gray-900 dark:hover:border-emerald-500">
+                          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                            <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z" /></svg>
+                          </span>
+                          <span class="min-w-0 truncate text-sm font-medium text-gray-800 dark:text-gray-200">{w.title}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
 
               <section class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Links</h2>

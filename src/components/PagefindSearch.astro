@@ -1,0 +1,106 @@
+---
+interface Props {
+  /** Pagefind filter to scope results, e.g. "type:Album" */
+  filter?: string;
+  placeholder?: string;
+}
+
+const { filter, placeholder = 'Search…' } = Astro.props;
+---
+
+<div id="pagefind-search" class="mb-8" data-filter={filter}>
+  <div class="relative">
+    <input
+      id="pf-input"
+      type="text"
+      placeholder={placeholder}
+      class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 pl-10 text-sm text-gray-900 shadow-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:focus:border-blue-500 dark:focus:ring-blue-900"
+    />
+    <svg class="absolute left-3 top-3.5 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+    </svg>
+    <button id="pf-clear" class="absolute right-3 top-3 hidden rounded-full p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label="Clear search">
+      <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+  <div id="pf-results" class="mt-4 hidden">
+    <p id="pf-summary" class="mb-3 text-sm text-gray-500 dark:text-gray-400"></p>
+    <ul id="pf-list" class="grid grid-cols-1 gap-2 sm:grid-cols-2"></ul>
+  </div>
+</div>
+
+<script is:inline>
+(function() {
+  let pagefind = null;
+  const container = document.getElementById('pagefind-search');
+  const input = document.getElementById('pf-input');
+  const clear = document.getElementById('pf-clear');
+  const results = document.getElementById('pf-results');
+  const summary = document.getElementById('pf-summary');
+  const list = document.getElementById('pf-list');
+  const filterAttr = container?.dataset.filter;
+  const browseContent = document.getElementById('browse-content');
+
+  let debounce = null;
+
+  async function init() {
+    if (pagefind) return;
+    pagefind = await import('/pagefind/pagefind.js');
+    await pagefind.init();
+  }
+
+  async function search(query) {
+    await init();
+    const filters = {};
+    if (filterAttr) {
+      const [k, v] = filterAttr.split(':');
+      filters[k] = v;
+    }
+    const result = await pagefind.search(query, { filters });
+    summary.textContent = `${result.results.length} result${result.results.length === 1 ? '' : 's'} for "${query}"`;
+
+    const items = await Promise.all(result.results.slice(0, 60).map(r => r.data()));
+    list.innerHTML = items.map(item => {
+      const img = item.meta?.image || item.meta?.cover;
+      const imgHtml = img
+        ? `<img src="${img}" alt="" class="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />`
+        : '';
+      return `<li>
+        <a href="${item.url}" class="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:border-blue-400 dark:border-gray-800">
+          ${imgHtml}
+          <div class="min-w-0">
+            <span class="block truncate text-sm font-medium text-gray-800 dark:text-gray-200">${item.meta?.title || 'Untitled'}</span>
+            <span class="block truncate text-xs text-gray-500 dark:text-gray-400">${item.excerpt || ''}</span>
+          </div>
+        </a>
+      </li>`;
+    }).join('');
+    results.classList.remove('hidden');
+    if (browseContent) browseContent.classList.add('hidden');
+  }
+
+  function reset() {
+    results.classList.add('hidden');
+    list.innerHTML = '';
+    summary.textContent = '';
+    clear.classList.add('hidden');
+    if (browseContent) browseContent.classList.remove('hidden');
+  }
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounce);
+    const q = input.value.trim();
+    if (q.length < 2) { reset(); return; }
+    clear.classList.remove('hidden');
+    debounce = setTimeout(() => search(q), 200);
+  });
+
+  clear.addEventListener('click', () => {
+    input.value = '';
+    reset();
+    input.focus();
+  });
+})();
+</script>

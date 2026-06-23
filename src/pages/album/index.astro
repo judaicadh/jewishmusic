@@ -1,41 +1,35 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PagefindSearch from '../../components/PagefindSearch.astro';
 import { getAllAlbums } from '../../lib/wikibase';
 
-// A compact, sorted list of every album for client-side paging. Full-text
-// search lives on the home page (Algolia); this is the browse-all view.
 const albums = [...(await getAllAlbums()).values()]
   .map((a) => ({ id: a.id, title: a.title, cover: a.cover }))
-  // Albums with cover art first, then alphabetical.
   .sort((a, b) => (b.cover ? 1 : 0) - (a.cover ? 1 : 0) || a.title.localeCompare(b.title));
 ---
 
 <BaseLayout title="Albums">
   <section class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
     <div class="mb-8">
-      <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-        Albums
-      </h1>
+      <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-3xl">Albums</h1>
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         {albums.length.toLocaleString()} albums from the Shira collection.
       </p>
     </div>
 
-    <div
-      id="album-grid"
-      class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
-    ></div>
+    <PagefindSearch filter="type:Album" placeholder="Search albums…" />
 
-    <div class="mt-8 flex items-center justify-center gap-4">
-      <button
-        id="prev"
-        class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"
-      >Previous</button>
-      <span id="page-info" class="text-sm text-gray-500 dark:text-gray-400"></span>
-      <button
-        id="next"
-        class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"
-      >Next</button>
+    <div id="browse-content">
+      <div
+        id="album-grid"
+        class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+      ></div>
+
+      <div class="mt-8 flex items-center justify-center gap-4">
+        <button id="prev" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Previous</button>
+        <span id="page-info" class="text-sm text-gray-500 dark:text-gray-400"></span>
+        <button id="next" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Next</button>
+      </div>
     </div>
   </section>
 

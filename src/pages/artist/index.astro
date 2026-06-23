@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PagefindSearch from '../../components/PagefindSearch.astro';
 import { getAllArtists } from '../../lib/wikibase';
 
 const artists = [...(await getAllArtists()).values()]
@@ -14,12 +15,16 @@ const artists = [...(await getAllArtists()).values()]
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{artists.length.toLocaleString()} artists, sorted by number of albums.</p>
     </div>
 
-    <ul id="list" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"></ul>
+    <PagefindSearch filter="type:Artist" placeholder="Search artists…" />
 
-    <div class="mt-8 flex items-center justify-center gap-4">
-      <button id="prev" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Previous</button>
-      <span id="page-info" class="text-sm text-gray-500 dark:text-gray-400"></span>
-      <button id="next" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Next</button>
+    <div id="browse-content">
+      <ul id="list" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"></ul>
+
+      <div class="mt-8 flex items-center justify-center gap-4">
+        <button id="prev" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Previous</button>
+        <span id="page-info" class="text-sm text-gray-500 dark:text-gray-400"></span>
+        <button id="next" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Next</button>
+      </div>
     </div>
   </section>
 
