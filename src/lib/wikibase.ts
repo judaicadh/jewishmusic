@@ -37,6 +37,7 @@ export const P = {
   audio: 'P85',
   describedAtUrl: 'P4',
   composedBy: 'P67',
+  inventoryNumber: 'P161',
   dartmouthLink: 'P162',
   rsaLink: 'P163',
   // Internet Archive identifier: property does NOT exist in the Wikibase yet.
@@ -225,6 +226,7 @@ export type Album = {
   rsaUrl?: string;
   /** Populated once the Internet Archive identifier property exists (see P.internetArchiveId). */
   internetArchiveId?: string;
+  inventoryNumber?: string;
   performers: Array<{ id?: string; label: string }>;
   recordLabels: Array<{ id?: string; label: string }>;
   tracks: AlbumTrack[];
