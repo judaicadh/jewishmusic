@@ -107,7 +107,7 @@ const typeBadgeColors: Record<string, string> = {
   const summary = document.getElementById('pf-summary');
   const list = document.getElementById('pf-list');
   const filterAttr = container?.dataset.filter;
-  const browseContent = document.getElementById('browse-content');
+  function getBrowseContent() { return document.getElementById('browse-content'); }
 
   let debounce = null;
   let activeType = 'all';
@@ -184,7 +184,7 @@ const typeBadgeColors: Record<string, string> = {
       </a>`;
     }).join('');
     results.classList.remove('hidden');
-    if (browseContent) browseContent.classList.add('hidden');
+    getBrowseContent()?.classList.add('hidden');
   }
 
   function reset() {
@@ -192,7 +192,7 @@ const typeBadgeColors: Record<string, string> = {
     list.innerHTML = '';
     summary.textContent = '';
     clear.classList.add('hidden');
-    if (browseContent) browseContent.classList.remove('hidden');
+    getBrowseContent()?.classList.remove('hidden');
   }
 
   input.addEventListener('input', () => {
