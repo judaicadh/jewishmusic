@@ -277,6 +277,7 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
              (SAMPLE(?discogs) AS ?discogs) (SAMPLE(?freedmanId) AS ?freedmanId)
              (SAMPLE(?cover) AS ?cover) (SAMPLE(?spotify) AS ?spotify) (SAMPLE(?youtube) AS ?youtube)
              (SAMPLE(?dartmouth) AS ?dartmouth) (SAMPLE(?rsa) AS ?rsa)
+             (SAMPLE(?invNum) AS ?invNum)
              (GROUP_CONCAT(DISTINCT ?perfStr; separator="||") AS ?performers)
              (GROUP_CONCAT(DISTINCT ?labelStr; separator="||") AS ?labels) WHERE {
         ?s wdt:${P.instanceOf} wd:${CLASS.album} .
@@ -292,6 +293,7 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
         OPTIONAL { ?s wdt:${P.youtubePlaylistId} ?youtube }
         OPTIONAL { ?s wdt:${P.dartmouthLink} ?dartmouth }
         OPTIONAL { ?s wdt:${P.rsaLink} ?rsa }
+        OPTIONAL { ?s wdt:${P.inventoryNumber} ?invNum }
         OPTIONAL { ?s wdt:${P.performer} ?perf .
                    OPTIONAL { ?perf rdfs:label ?pl FILTER(LANG(?pl)="en") }
                    BIND(CONCAT(STR(?perf),"::",COALESCE(?pl,"")) AS ?perfStr) }
@@ -337,6 +339,7 @@ async function loadAllAlbums(): Promise<Map<string, Album>> {
       youtubePlaylistId: r.youtube,
       dartmouthUrl: r.dartmouth,
       rsaUrl: r.rsa,
+      inventoryNumber: r.invNum,
       performers: parseRefs(r.performers),
       recordLabels: parseRefs(r.labels),
       tracks: [],
