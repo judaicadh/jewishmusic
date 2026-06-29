@@ -4,7 +4,7 @@
     {
       "name": "preview",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "dist", "-p", "4322"],
+      "runtimeArgs": ["serve", "dist", "-p", "4322", "-c", "../serve.json"],
       "port": 4322,
       "autoPort": false
     }
