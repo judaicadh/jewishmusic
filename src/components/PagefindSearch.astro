@@ -3,87 +3,174 @@ interface Props {
   /** Pagefind filter to scope results, e.g. "type:Album" */
   filter?: string;
   placeholder?: string;
-  /** Enable faceted browsing (show all results before searching) */
+  /** Enable faceted browsing with filter pane (show all results before searching) */
   faceted?: boolean;
 }
 
 const { filter, placeholder = 'Search…', faceted = false } = Astro.props;
+const showFilterPane = !filter;
 ---
 
 <link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />
 <script src="/pagefind/pagefind-component-ui.js" type="module"></script>
 
-<div class="pagefind-wrap">
-  <pagefind-config
-    {faceted ? 'faceted' : null}
-    {faceted ? 'preload' : null}
-  ></pagefind-config>
+{showFilterPane ? (
+  <!-- Full explore layout with filter pane -->
+  <div class="pagefind-wrap">
+    <pagefind-config faceted preload></pagefind-config>
 
-  <div class="pf-layout">
-    <aside class="pf-sidebar">
-      <pagefind-filter-pane expanded sort="count-desc"></pagefind-filter-pane>
+    <div class="pf-layout">
+      <aside class="pf-sidebar">
+        <pagefind-filter-pane expanded sort="count-desc"></pagefind-filter-pane>
 
-      <!-- Availability key -->
-      <div class="mt-6 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-        <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Availability key</h3>
-        <ul class="space-y-2.5 text-sm">
-          <li class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </span>
-            Streamable (Spotify, YouTube, or Internet Archive)
-          </li>
-          <li class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
-              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z"/></svg>
-            </span>
-            Physical copy in the collection
-          </li>
-        </ul>
-      </div>
-    </aside>
+        <div class="mt-6 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+          <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Availability key</h3>
+          <ul class="space-y-2.5 text-sm">
+            <li class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </span>
+              Streamable
+            </li>
+            <li class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z"/></svg>
+              </span>
+              Physical copy in collection
+            </li>
+          </ul>
+        </div>
+      </aside>
 
-    <div class="pf-main">
-      <pagefind-input placeholder={placeholder}></pagefind-input>
-      <pagefind-summary class="mt-3 block text-sm text-gray-500 dark:text-gray-400"></pagefind-summary>
-      <pagefind-results class="mt-4">
-        <script type="text/pagefind-template">
-          <a href="{{ url | resolveUrl }}" class="pf-card">
-            <div class="pf-card-image">
-              {{#if meta.cover}}
-                <img src="{{ meta.cover | resolveUrl }}" alt="" loading="lazy" />
-              {{/if}}
-              {{#unless meta.cover}}
-                <div class="pf-card-placeholder">
+      <div class="pf-main">
+        <pagefind-input placeholder={placeholder}></pagefind-input>
+        <pagefind-summary class="mt-3 block text-sm text-gray-500 dark:text-gray-400"></pagefind-summary>
+        <pagefind-results class="mt-4">
+          <script type="text/pagefind-template">
+            <a href="{{ url | resolveUrl }}" class="pf-card">
+              <div class="pf-card-image">
+                {{#if meta.cover}}
+                  <img src="{{ meta.cover | resolveUrl }}" alt="" loading="lazy" />
                   <span class="pf-card-type-badge pf-badge-{{ meta.type | lowercase }}">{{ meta.type }}</span>
+                {{/if}}
+                {{#unless meta.cover}}
+                  <div class="pf-card-placeholder">
+                    <span class="pf-card-type-badge pf-badge-{{ meta.type | lowercase }}">{{ meta.type }}</span>
+                  </div>
+                {{/unless}}
+                <div class="pf-card-avail">
+                  {{#if meta.listen}}
+                    <span class="pf-avail-dot pf-avail-listen" title="Streamable">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    </span>
+                  {{/if}}
+                  {{#if meta.physical}}
+                    <span class="pf-avail-dot pf-avail-physical" title="Physical copy">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z"/></svg>
+                    </span>
+                  {{/if}}
                 </div>
-              {{/unless}}
-              {{#if meta.cover}}
-                <span class="pf-card-type-badge pf-badge-{{ meta.type | lowercase }}">{{ meta.type }}</span>
-              {{/if}}
-              <div class="pf-card-avail">
-                {{#if meta.listen}}
-                  <span class="pf-avail-dot pf-avail-listen" title="Streamable">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                  </span>
-                {{/if}}
-                {{#if meta.physical}}
-                  <span class="pf-avail-dot pf-avail-physical" title="Physical copy">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z"/></svg>
-                  </span>
-                {{/if}}
               </div>
-            </div>
-            <div class="pf-card-body">
-              <h3 class="pf-card-title">{{ meta.title }}</h3>
-              <p class="pf-card-excerpt">{{+ excerpt +}}</p>
-            </div>
-          </a>
-        </script>
-      </pagefind-results>
+              <div class="pf-card-body">
+                <h3 class="pf-card-title">{{ meta.title }}</h3>
+                <p class="pf-card-excerpt">{{+ excerpt +}}</p>
+              </div>
+            </a>
+          </script>
+        </pagefind-results>
+      </div>
     </div>
   </div>
-</div>
+) : (
+  <!-- Simple search bar for filtered browse pages -->
+  <div id="pagefind-search" class="mb-8" data-filter={filter}>
+    <div class="relative">
+      <input
+        id="pf-input"
+        type="text"
+        placeholder={placeholder}
+        class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 pl-11 text-sm text-gray-900 shadow-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:focus:border-blue-500 dark:focus:ring-blue-900"
+      />
+      <svg class="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+      </svg>
+      <button id="pf-clear" class="absolute right-3 top-3 hidden rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200" aria-label="Clear search">
+        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div id="pf-results" class="mt-4 hidden">
+      <p id="pf-summary" class="mb-3 text-sm text-gray-500 dark:text-gray-400"></p>
+      <ul id="pf-list" class="space-y-2"></ul>
+    </div>
+  </div>
+
+  <script is:inline>
+  (function() {
+    let pagefind = null;
+    const container = document.getElementById('pagefind-search');
+    const input = document.getElementById('pf-input');
+    const clear = document.getElementById('pf-clear');
+    const results = document.getElementById('pf-results');
+    const summary = document.getElementById('pf-summary');
+    const list = document.getElementById('pf-list');
+    const filterAttr = container?.dataset.filter;
+    function getBrowseContent() { return document.getElementById('browse-content'); }
+
+    let debounce = null;
+
+    async function init() {
+      if (pagefind) return;
+      pagefind = await import('/pagefind/pagefind.js');
+      await pagefind.init();
+    }
+
+    async function search(query) {
+      await init();
+      const filters = {};
+      if (filterAttr) {
+        const [k, v] = filterAttr.split(':');
+        filters[k] = v;
+      }
+      const result = await pagefind.search(query, { filters });
+      summary.textContent = result.results.length + ' result' + (result.results.length === 1 ? '' : 's') + ' for "' + query + '"';
+      const items = await Promise.all(result.results.slice(0, 60).map(function(r) { return r.data(); }));
+      list.innerHTML = items.map(function(item) {
+        return '<li><a href="' + item.url + '" class="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:border-blue-400 dark:border-gray-800">' +
+          '<div class="min-w-0">' +
+            '<span class="block truncate text-sm font-medium text-gray-800 dark:text-gray-200">' + (item.meta?.title || 'Untitled') + '</span>' +
+            (item.excerpt ? '<span class="block truncate text-xs text-gray-500 dark:text-gray-400">' + item.excerpt + '</span>' : '') +
+          '</div></a></li>';
+      }).join('');
+      results.classList.remove('hidden');
+      getBrowseContent()?.classList.add('hidden');
+    }
+
+    function reset() {
+      results.classList.add('hidden');
+      list.innerHTML = '';
+      summary.textContent = '';
+      clear.classList.add('hidden');
+      getBrowseContent()?.classList.remove('hidden');
+    }
+
+    input.addEventListener('input', function() {
+      clearTimeout(debounce);
+      var q = input.value.trim();
+      if (q.length < 2) { reset(); return; }
+      clear.classList.remove('hidden');
+      debounce = setTimeout(function() { search(q); }, 200);
+    });
+
+    clear.addEventListener('click', function() {
+      input.value = '';
+      reset();
+      input.focus();
+    });
+  })();
+  </script>
+)}
 
 <style is:global>
   /* Layout: sidebar + main */
@@ -160,11 +247,6 @@ const { filter, placeholder = 'Search…', faceted = false } = Astro.props;
     border-radius: 0.25rem;
     accent-color: rgb(59 130 246);
   }
-  pagefind-filter-pane .pagefind-filter-pane__count {
-    margin-left: auto;
-    font-size: 0.75rem;
-    color: rgb(156 163 175);
-  }
 
   /* Result cards */
   pagefind-results {
@@ -172,12 +254,12 @@ const { filter, placeholder = 'Search…', faceted = false } = Astro.props;
   }
   pagefind-results > ol,
   pagefind-results > ul {
-    display: grid;
+    display: grid !important;
     grid-template-columns: repeat(1, minmax(0, 1fr));
     gap: 1rem;
-    list-style: none;
-    padding: 0;
-    margin: 0;
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
   @media (min-width: 640px) {
     pagefind-results > ol,
@@ -188,7 +270,7 @@ const { filter, placeholder = 'Search…', faceted = false } = Astro.props;
     pagefind-results > ul { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
   pagefind-results li {
-    list-style: none;
+    list-style: none !important;
   }
 
   .pf-card {
