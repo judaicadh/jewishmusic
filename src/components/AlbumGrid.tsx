@@ -79,12 +79,34 @@ const typeBadgeStyles: Record<string, string> = {
     'Record Label': 'bg-yellow-400/15 text-yellow-100 border-yellow-300/20',
     human: 'bg-emerald-400/15 text-emerald-100 border-emerald-300/20',
     artist: 'bg-emerald-400/15 text-emerald-100 border-emerald-300/20',
+    choir: 'bg-emerald-400/15 text-emerald-100 border-emerald-300/20',
     'musical work/composition': 'bg-fuchsia-400/15 text-fuchsia-100 border-fuchsia-300/20',
+    // The three "audio track" category members are conceptually distinct and get
+    // their own colors so a recording reads differently from the work it performs.
     'audio track': 'bg-sky-400/15 text-sky-100 border-sky-300/20',
-    'musical work': 'bg-sky-400/15 text-sky-100 border-sky-300/20',
-    song: 'bg-sky-400/15 text-sky-100 border-sky-300/20',
+    'musical work': 'bg-indigo-400/15 text-indigo-100 border-indigo-300/20',
+    song: 'bg-violet-400/15 text-violet-100 border-violet-300/20',
     'sheet music': 'bg-cyan-400/15 text-cyan-100 border-cyan-300/20',
 };
+
+// Human-friendly badge text for the raw Wikibase typeLabels.
+const typeDisplayLabels: Record<string, string> = {
+    album: 'Album',
+    'Record Label': 'Label',
+    human: 'Artist',
+    artist: 'Artist',
+    choir: 'Choir',
+    'musical work/composition': 'Composition',
+    'audio track': 'Audio track',
+    'musical work': 'Musical work',
+    song: 'Song',
+    'sheet music': 'Sheet music',
+};
+
+function getTypeDisplayLabel(typeLabel?: string, fallback = ''): string {
+    if (!typeLabel) return fallback;
+    return typeDisplayLabels[typeLabel] ?? typeLabel;
+}
 
 function cn(...classes: Array<string | false | null | undefined>) {
     return classes.filter(Boolean).join(' ');
@@ -136,9 +158,12 @@ function TypeFallback({ typeLabel }: { typeLabel?: string }) {
     const iconClass = 'h-10 w-10 text-white/85';
 
     if (typeLabel === 'album') return <Disc3 className={iconClass} />;
-    if (typeLabel === 'human') return <UserRound className={iconClass} />;
+    if (typeLabel === 'human' || typeLabel === 'artist' || typeLabel === 'choir')
+        return <UserRound className={iconClass} />;
     if (typeLabel === 'Record Label') return <Tag className={iconClass} />;
     if (typeLabel === 'sheet music') return <FileMusic className={iconClass} />;
+    // A recording (audio track) gets a waveform; works/songs/compositions get a note.
+    if (typeLabel === 'audio track') return <AudioLines className={iconClass} />;
     return <Music4 className={iconClass} />;
 }
 
@@ -249,7 +274,7 @@ function ResultCard({
                             </div>
                             <div className="max-w-[85%]">
                                 <p className="line-clamp-2 text-sm font-medium text-white/85">
-                                    {hit.typeLabel ?? mode}
+                                    {getTypeDisplayLabel(hit.typeLabel, mode)}
                                 </p>
                                 <p className="mt-1 text-xs text-white/45">No image available</p>
                             </div>
@@ -265,7 +290,7 @@ function ResultCard({
                     typeBadgeStyles[hit.typeLabel ?? ''] ?? 'bg-white/15 text-white border-white/15'
                 )}
             >
-              {hit.typeLabel ?? mode}
+              {getTypeDisplayLabel(hit.typeLabel, mode)}
             </span>
                         <div className="rounded-full bg-black/35 px-2.5 py-1 text-[11px] text-white/70 backdrop-blur">
                             View
