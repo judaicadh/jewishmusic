@@ -65,8 +65,12 @@ const hasPhysical = !!album.inventoryNumber;
 <BaseLayout title={pageTitle}>
   <section class="bg-white py-8 antialiased dark:bg-gray-950 md:py-12"
     data-pagefind-body
-    data-pagefind-meta={`type:Album, cover:${coverImage}, listen:${canListen ? 'yes' : ''}, physical:${hasPhysical ? 'yes' : ''}`}
+    data-pagefind-meta="type:Album"
     data-pagefind-filter="type:Album">
+    {/* One key per element — Pagefind does not split comma-separated meta pairs. */}
+    <span class="hidden" data-pagefind-meta={`cover:${coverImage}`}></span>
+    {canListen && <span class="hidden" data-pagefind-meta="listen:yes"></span>}
+    {hasPhysical && <span class="hidden" data-pagefind-meta="physical:yes"></span>}
     {canListen && <span data-pagefind-filter="availability:Streamable" class="hidden"></span>}
     {hasPhysical && <span data-pagefind-filter="availability:Physical copy" class="hidden"></span>}
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
