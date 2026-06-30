@@ -79,8 +79,13 @@ const showFilterPane = !filter;
 // Faceted explore: drives the Pagefind JS API directly for full control over
 // card markup, filter facets, and availability indicators.
 (function () {
+  // astro:page-load fires on the initial load AND after every client-side
+  // (View Transitions) navigation. Inline scripts are deduplicated by Astro's
+  // ClientRouter and won't re-run on their own, so init must hang off this event.
+  function boot() {
   var root = document.getElementById('shira-explore');
-  if (!root) return;
+  if (!root || root.dataset.shiraReady) return;
+  root.dataset.shiraReady = '1';
 
   var qInput = document.getElementById('shira-q');
   var summaryEl = document.getElementById('shira-summary');
@@ -215,14 +220,18 @@ const showFilterPane = !filter;
   });
 
   init();
+  }
+  document.addEventListener('astro:page-load', boot);
 })();
 </script>
 
 <script is:inline>
 // Simple scoped search (used on filtered browse pages, e.g. type:Album).
 (function() {
+  function boot() {
   var container = document.getElementById('pagefind-search');
-  if (!container) return;
+  if (!container || container.dataset.shiraReady) return;
+  container.dataset.shiraReady = '1';
   var pagefind = null;
   var input = document.getElementById('pf-input');
   var clear = document.getElementById('pf-clear');
@@ -284,6 +293,8 @@ const showFilterPane = !filter;
     reset();
     input.focus();
   });
+  }
+  document.addEventListener('astro:page-load', boot);
 })();
 </script>
 
