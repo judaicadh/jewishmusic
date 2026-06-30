@@ -1,48 +1,18 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PagefindSearch from '../components/PagefindSearch.astro';
-import { getAllAlbums, getAllArtists, getAllLabels, getAllCompositions } from '../lib/wikibase';
-
-const [albums, artists, labels, comps] = await Promise.all([
-  getAllAlbums(),
-  getAllArtists(),
-  getAllLabels(),
-  getAllCompositions(),
-]);
-
-const browse = [
-  { label: 'Albums', count: albums.size, href: '/album', blurb: 'Releases, with cover art, track lists, and listening links.' },
-  { label: 'Artists', count: artists.size, href: '/artist', blurb: 'Performers and ensembles, with their discographies.' },
-  { label: 'Compositions', count: comps.size, href: '/composition', blurb: 'Songs and musical works, and the albums they appear on.' },
-  { label: 'Record labels', count: labels.size, href: '/label', blurb: 'Labels and the releases in the collection.' },
-];
 ---
 
 <BaseLayout title="Explore">
-  <section class="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+  <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
     <p class="text-sm font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">Explore</p>
     <h1 class="mt-2 text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
       Explore the catalog
     </h1>
     <p class="mt-4 mb-8 text-lg leading-8 text-gray-700 dark:text-gray-300">
-      Search across all albums, artists, compositions, and labels.
+      Search and filter across all albums, artists, compositions, and labels.
     </p>
 
-    <PagefindSearch placeholder="Search the entire collection…" />
-
-    <div id="browse-content">
-      <h2 class="mt-4 text-2xl font-semibold text-gray-900 dark:text-white">Browse by type</h2>
-      <div class="mt-6 grid gap-4 sm:grid-cols-2">
-        {browse.map((b) => (
-          <a href={b.href} class="group block rounded-3xl border border-gray-200 bg-white p-6 shadow-sm hover:border-blue-400 dark:border-gray-800 dark:bg-gray-900">
-            <div class="flex items-baseline justify-between gap-3">
-              <h3 class="text-lg font-semibold text-gray-900 group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-400">{b.label}</h3>
-              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{b.count.toLocaleString()}</span>
-            </div>
-            <p class="mt-2 leading-7 text-gray-700 dark:text-gray-300">{b.blurb}</p>
-          </a>
-        ))}
-      </div>
-    </div>
+    <PagefindSearch faceted placeholder="Search the entire collection…" />
   </section>
 </BaseLayout>

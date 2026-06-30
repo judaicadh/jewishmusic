@@ -57,10 +57,18 @@ const externalLinks = [
   album.rsaUrl && { label: 'Recorded Sound Archives', href: album.rsaUrl },
   discogsUrl && { label: 'Discogs', href: discogsUrl },
 ].filter(Boolean) as Array<{ label: string; href: string }>;
+
+const canListen = !!(spotifyEmbed || youtubeEmbed || iaEmbed);
+const hasPhysical = !!album.inventoryNumber;
 ---
 
 <BaseLayout title={pageTitle}>
-  <section class="bg-white py-8 antialiased dark:bg-gray-950 md:py-12" data-pagefind-body data-pagefind-meta={`type:Album, cover:${coverImage}`} data-pagefind-filter="type:Album">
+  <section class="bg-white py-8 antialiased dark:bg-gray-950 md:py-12"
+    data-pagefind-body
+    data-pagefind-meta={`type:Album, cover:${coverImage}, listen:${canListen ? 'yes' : ''}, physical:${hasPhysical ? 'yes' : ''}`}
+    data-pagefind-filter="type:Album">
+    {canListen && <span data-pagefind-filter="availability:Streamable" class="hidden"></span>}
+    {hasPhysical && <span data-pagefind-filter="availability:Physical copy" class="hidden"></span>}
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="grid gap-10 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
         <aside class="space-y-5">
