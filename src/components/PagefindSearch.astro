@@ -9,9 +9,12 @@ interface Props {
 
 const { filter, placeholder = 'Search…', faceted = false } = Astro.props;
 const showFilterPane = !filter;
+
+const resultTemplate = `<script type="text/pagefind-template"><a href="{{ url }}" class="shira-card"><div class="shira-card-image">{{#if meta.cover}}<img src="{{ meta.cover }}" alt="" loading="lazy" /><span class="shira-card-type-badge">{{ meta.type }}</span>{{else}}<div class="shira-card-placeholder"><span class="shira-card-type-badge">{{ meta.type }}</span></div>{{/if}}<div class="shira-card-avail">{{#if meta.listen}}<span class="shira-avail-dot shira-avail-listen" title="Streamable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>{{/if}}{{#if meta.physical}}<span class="shira-avail-dot shira-avail-physical" title="Physical copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z"/></svg></span>{{/if}}</div></div><div class="shira-card-body"><h3 class="shira-card-title">{{ meta.title }}</h3><p class="shira-card-excerpt">{{+ excerpt +}}</p></div></a><\/script>`;
 ---
 
 <link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />
+<script src="/pagefind/pagefind-component-ui.js" type="module"></script>
 
 {showFilterPane && (
   <div class="shira-wrap">
@@ -43,7 +46,7 @@ const showFilterPane = !filter;
       <div class="shira-main">
         <pagefind-input placeholder={placeholder}></pagefind-input>
         <pagefind-summary class="mt-3 block text-sm text-gray-500 dark:text-gray-400"></pagefind-summary>
-        <pagefind-results class="mt-4" id="shira-results"></pagefind-results>
+        <pagefind-results class="mt-4" set:html={resultTemplate}></pagefind-results>
       </div>
     </div>
   </div>
@@ -73,36 +76,6 @@ const showFilterPane = !filter;
     </div>
   </div>
 )}
-
-<script is:inline>
-(function() {
-  var el = document.getElementById('shira-results');
-  if (!el) return;
-  var tpl = document.createElement('script');
-  tpl.type = 'text/pagefind-template';
-  tpl.textContent = '<a href="{{ url }}" class="shira-card">'
-    + '<div class="shira-card-image">'
-    + '{{#if meta.cover}}'
-    + '<img src="{{ meta.cover }}" alt="" loading="lazy" />'
-    + '<span class="shira-card-type-badge">{{ meta.type }}</span>'
-    + '{{else}}'
-    + '<div class="shira-card-placeholder"><span class="shira-card-type-badge">{{ meta.type }}</span></div>'
-    + '{{/if}}'
-    + '<div class="shira-card-avail">'
-    + '{{#if meta.listen}}<span class="shira-avail-dot shira-avail-listen" title="Streamable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>{{/if}}'
-    + '{{#if meta.physical}}<span class="shira-avail-dot shira-avail-physical" title="Physical copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z"/></svg></span>{{/if}}'
-    + '</div></div>'
-    + '<div class="shira-card-body">'
-    + '<h3 class="shira-card-title">{{ meta.title }}</h3>'
-    + '<p class="shira-card-excerpt">{{+ excerpt +}}</p>'
-    + '</div></a>';
-  el.appendChild(tpl);
-  var s = document.createElement('script');
-  s.type = 'module';
-  s.src = '/pagefind/pagefind-component-ui.js';
-  document.head.appendChild(s);
-})();
-</script>
 
 <script is:inline>
 (function() {
