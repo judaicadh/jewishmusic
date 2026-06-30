@@ -14,13 +14,12 @@ const showFilterPane = !filter;
 <link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />
 <script src="/pagefind/pagefind-component-ui.js" type="module"></script>
 
-{showFilterPane ? (
-  <!-- Full explore layout with filter pane -->
-  <div class="pagefind-wrap">
+{showFilterPane && (
+  <div class="shira-wrap">
     <pagefind-config faceted preload></pagefind-config>
 
-    <div class="pf-layout">
-      <aside class="pf-sidebar">
+    <div class="shira-layout">
+      <aside class="shira-sidebar">
         <pagefind-filter-pane expanded sort="count-desc"></pagefind-filter-pane>
 
         <div class="mt-6 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
@@ -42,38 +41,37 @@ const showFilterPane = !filter;
         </div>
       </aside>
 
-      <div class="pf-main">
+      <div class="shira-main">
         <pagefind-input placeholder={placeholder}></pagefind-input>
         <pagefind-summary class="mt-3 block text-sm text-gray-500 dark:text-gray-400"></pagefind-summary>
         <pagefind-results class="mt-4">
           <script type="text/pagefind-template">
-            <a href="{{ url | resolveUrl }}" class="pf-card">
-              <div class="pf-card-image">
+            <a href="{{ url | resolveUrl }}" class="shira-card">
+              <div class="shira-card-image">
                 {{#if meta.cover}}
                   <img src="{{ meta.cover | resolveUrl }}" alt="" loading="lazy" />
-                  <span class="pf-card-type-badge pf-badge-{{ meta.type | lowercase }}">{{ meta.type }}</span>
-                {{/if}}
-                {{#unless meta.cover}}
-                  <div class="pf-card-placeholder">
-                    <span class="pf-card-type-badge pf-badge-{{ meta.type | lowercase }}">{{ meta.type }}</span>
+                  <span class="shira-card-type-badge shira-badge-{{ meta.type | lowercase }}">{{ meta.type }}</span>
+                {{else}}
+                  <div class="shira-card-placeholder">
+                    <span class="shira-card-type-badge shira-badge-{{ meta.type | lowercase }}">{{ meta.type }}</span>
                   </div>
-                {{/unless}}
-                <div class="pf-card-avail">
+                {{/if}}
+                <div class="shira-card-avail">
                   {{#if meta.listen}}
-                    <span class="pf-avail-dot pf-avail-listen" title="Streamable">
+                    <span class="shira-avail-dot shira-avail-listen" title="Streamable">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     </span>
                   {{/if}}
                   {{#if meta.physical}}
-                    <span class="pf-avail-dot pf-avail-physical" title="Physical copy">
+                    <span class="shira-avail-dot shira-avail-physical" title="Physical copy">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z"/></svg>
                     </span>
                   {{/if}}
                 </div>
               </div>
-              <div class="pf-card-body">
-                <h3 class="pf-card-title">{{ meta.title }}</h3>
-                <p class="pf-card-excerpt">{{+ excerpt +}}</p>
+              <div class="shira-card-body">
+                <h3 class="shira-card-title">{{ meta.title }}</h3>
+                <p class="shira-card-excerpt">{{+ excerpt +}}</p>
               </div>
             </a>
           </script>
@@ -81,8 +79,9 @@ const showFilterPane = !filter;
       </div>
     </div>
   </div>
-) : (
-  <!-- Simple search bar for filtered browse pages -->
+)}
+
+{filter && (
   <div id="pagefind-search" class="mb-8" data-filter={filter}>
     <div class="relative">
       <input
@@ -105,90 +104,93 @@ const showFilterPane = !filter;
       <ul id="pf-list" class="space-y-2"></ul>
     </div>
   </div>
-
-  <script is:inline>
-  (function() {
-    let pagefind = null;
-    const container = document.getElementById('pagefind-search');
-    const input = document.getElementById('pf-input');
-    const clear = document.getElementById('pf-clear');
-    const results = document.getElementById('pf-results');
-    const summary = document.getElementById('pf-summary');
-    const list = document.getElementById('pf-list');
-    const filterAttr = container?.dataset.filter;
-    function getBrowseContent() { return document.getElementById('browse-content'); }
-
-    let debounce = null;
-
-    async function init() {
-      if (pagefind) return;
-      pagefind = await import('/pagefind/pagefind.js');
-      await pagefind.init();
-    }
-
-    async function search(query) {
-      await init();
-      const filters = {};
-      if (filterAttr) {
-        const [k, v] = filterAttr.split(':');
-        filters[k] = v;
-      }
-      const result = await pagefind.search(query, { filters });
-      summary.textContent = result.results.length + ' result' + (result.results.length === 1 ? '' : 's') + ' for "' + query + '"';
-      const items = await Promise.all(result.results.slice(0, 60).map(function(r) { return r.data(); }));
-      list.innerHTML = items.map(function(item) {
-        return '<li><a href="' + item.url + '" class="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:border-blue-400 dark:border-gray-800">' +
-          '<div class="min-w-0">' +
-            '<span class="block truncate text-sm font-medium text-gray-800 dark:text-gray-200">' + (item.meta?.title || 'Untitled') + '</span>' +
-            (item.excerpt ? '<span class="block truncate text-xs text-gray-500 dark:text-gray-400">' + item.excerpt + '</span>' : '') +
-          '</div></a></li>';
-      }).join('');
-      results.classList.remove('hidden');
-      getBrowseContent()?.classList.add('hidden');
-    }
-
-    function reset() {
-      results.classList.add('hidden');
-      list.innerHTML = '';
-      summary.textContent = '';
-      clear.classList.add('hidden');
-      getBrowseContent()?.classList.remove('hidden');
-    }
-
-    input.addEventListener('input', function() {
-      clearTimeout(debounce);
-      var q = input.value.trim();
-      if (q.length < 2) { reset(); return; }
-      clear.classList.remove('hidden');
-      debounce = setTimeout(function() { search(q); }, 200);
-    });
-
-    clear.addEventListener('click', function() {
-      input.value = '';
-      reset();
-      input.focus();
-    });
-  })();
-  </script>
 )}
+
+<script is:inline>
+(function() {
+  var container = document.getElementById('pagefind-search');
+  if (!container) return;
+  var pagefind = null;
+  var input = document.getElementById('pf-input');
+  var clear = document.getElementById('pf-clear');
+  var results = document.getElementById('pf-results');
+  var summary = document.getElementById('pf-summary');
+  var list = document.getElementById('pf-list');
+  var filterAttr = container.dataset.filter;
+  function getBrowseContent() { return document.getElementById('browse-content'); }
+
+  var timer = null;
+
+  async function init() {
+    if (pagefind) return;
+    pagefind = await import('/pagefind/pagefind.js');
+    await pagefind.init();
+  }
+
+  async function search(query) {
+    await init();
+    var filters = {};
+    if (filterAttr) {
+      var parts = filterAttr.split(':');
+      filters[parts[0]] = parts[1];
+    }
+    var result = await pagefind.search(query, { filters: filters });
+    summary.textContent = result.results.length + ' result' + (result.results.length === 1 ? '' : 's') + ' for "' + query + '"';
+    var items = await Promise.all(result.results.slice(0, 60).map(function(r) { return r.data(); }));
+    list.innerHTML = items.map(function(item) {
+      return '<li><a href="' + item.url + '" class="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:border-blue-400 dark:border-gray-800">' +
+        '<div class="min-w-0">' +
+          '<span class="block truncate text-sm font-medium text-gray-800 dark:text-gray-200">' + (item.meta && item.meta.title ? item.meta.title : 'Untitled') + '</span>' +
+          (item.excerpt ? '<span class="block text-xs text-gray-500 dark:text-gray-400">' + item.excerpt + '</span>' : '') +
+        '</div></a></li>';
+    }).join('');
+    results.classList.remove('hidden');
+    var bc = getBrowseContent();
+    if (bc) bc.classList.add('hidden');
+  }
+
+  function reset() {
+    results.classList.add('hidden');
+    list.innerHTML = '';
+    summary.textContent = '';
+    clear.classList.add('hidden');
+    var bc = getBrowseContent();
+    if (bc) bc.classList.remove('hidden');
+  }
+
+  input.addEventListener('input', function() {
+    clearTimeout(timer);
+    var q = input.value.trim();
+    if (q.length < 2) { reset(); return; }
+    clear.classList.remove('hidden');
+    timer = setTimeout(function() { search(q); }, 200);
+  });
+
+  clear.addEventListener('click', function() {
+    input.value = '';
+    reset();
+    input.focus();
+  });
+})();
+</script>
 
 <style is:global>
   /* Layout: sidebar + main */
-  .pf-layout {
+  .shira-layout {
     display: grid;
     gap: 2rem;
     grid-template-columns: 1fr;
   }
   @media (min-width: 768px) {
-    .pf-layout {
+    .shira-layout {
       grid-template-columns: 260px minmax(0, 1fr);
     }
   }
-  .pf-sidebar {
+  .shira-sidebar {
     order: 2;
   }
   @media (min-width: 768px) {
-    .pf-sidebar { order: 0; }
+    .shira-sidebar { order: 0; }
   }
 
   /* Pagefind component overrides */
@@ -273,7 +275,7 @@ const showFilterPane = !filter;
     list-style: none !important;
   }
 
-  .pf-card {
+  .shira-card {
     display: block;
     overflow: hidden;
     border-radius: 1rem;
@@ -284,26 +286,26 @@ const showFilterPane = !filter;
     text-decoration: none;
     color: inherit;
   }
-  .pf-card:hover {
+  .shira-card:hover {
     border-color: rgb(147 197 253);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     transform: translateY(-2px);
   }
-  .pf-card-image {
+  .shira-card-image {
     position: relative;
     overflow: hidden;
   }
-  .pf-card-image img {
+  .shira-card-image img {
     aspect-ratio: 1;
     width: 100%;
     object-fit: cover;
     display: block;
     transition: transform 0.3s;
   }
-  .pf-card:hover .pf-card-image img {
+  .shira-card:hover .shira-card-image img {
     transform: scale(1.05);
   }
-  .pf-card-placeholder {
+  .shira-card-placeholder {
     aspect-ratio: 1;
     width: 100%;
     display: flex;
@@ -311,7 +313,7 @@ const showFilterPane = !filter;
     justify-content: center;
     background: rgb(243 244 246);
   }
-  .pf-card-type-badge {
+  .shira-card-type-badge {
     position: absolute;
     top: 0.625rem;
     left: 0.625rem;
@@ -321,24 +323,24 @@ const showFilterPane = !filter;
     font-weight: 600;
     line-height: 1.2;
   }
-  .pf-card-placeholder .pf-card-type-badge {
+  .shira-card-placeholder .shira-card-type-badge {
     position: static;
     font-size: 0.8125rem;
   }
-  .pf-badge-album { background: rgb(219 234 254); color: rgb(30 64 175); }
-  .pf-badge-artist { background: rgb(243 232 255); color: rgb(107 33 168); }
-  .pf-badge-composition { background: rgb(209 250 229); color: rgb(6 95 70); }
-  .pf-badge-label { background: rgb(254 243 199); color: rgb(146 64 14); }
+  .shira-badge-album { background: rgb(219 234 254); color: rgb(30 64 175); }
+  .shira-badge-artist { background: rgb(243 232 255); color: rgb(107 33 168); }
+  .shira-badge-composition { background: rgb(209 250 229); color: rgb(6 95 70); }
+  .shira-badge-label { background: rgb(254 243 199); color: rgb(146 64 14); }
 
   /* Availability dots */
-  .pf-card-avail {
+  .shira-card-avail {
     position: absolute;
     bottom: 0.5rem;
     right: 0.5rem;
     display: flex;
     gap: 0.25rem;
   }
-  .pf-avail-dot {
+  .shira-avail-dot {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -347,23 +349,23 @@ const showFilterPane = !filter;
     border-radius: 9999px;
     backdrop-filter: blur(4px);
   }
-  .pf-avail-dot svg {
+  .shira-avail-dot svg {
     width: 0.75rem;
     height: 0.75rem;
   }
-  .pf-avail-listen {
+  .shira-avail-listen {
     background: rgba(34, 197, 94, 0.85);
     color: white;
   }
-  .pf-avail-physical {
+  .shira-avail-physical {
     background: rgba(245, 158, 11, 0.85);
     color: white;
   }
 
-  .pf-card-body {
+  .shira-card-body {
     padding: 0.75rem 0.875rem;
   }
-  .pf-card-title {
+  .shira-card-title {
     font-size: 0.875rem;
     font-weight: 600;
     color: rgb(17 24 39);
@@ -373,10 +375,10 @@ const showFilterPane = !filter;
     overflow: hidden;
     margin: 0;
   }
-  .pf-card:hover .pf-card-title {
+  .shira-card:hover .shira-card-title {
     color: rgb(29 78 216);
   }
-  .pf-card-excerpt {
+  .shira-card-excerpt {
     margin: 0.25rem 0 0;
     font-size: 0.75rem;
     color: rgb(107 114 128);
@@ -385,7 +387,7 @@ const showFilterPane = !filter;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .pf-card-excerpt mark {
+  .shira-card-excerpt mark {
     background: rgb(254 240 138);
     color: inherit;
     border-radius: 2px;
@@ -415,23 +417,23 @@ const showFilterPane = !filter;
   .dark pagefind-filter-pane label:hover {
     background: rgb(31 41 55);
   }
-  .dark .pf-card {
+  .dark .shira-card {
     background: rgb(17 24 39);
     border-color: rgb(55 65 81);
   }
-  .dark .pf-card:hover {
+  .dark .shira-card:hover {
     border-color: rgb(59 130 246);
   }
-  .dark .pf-card-placeholder {
+  .dark .shira-card-placeholder {
     background: rgb(31 41 55);
   }
-  .dark .pf-card-title {
+  .dark .shira-card-title {
     color: white;
   }
-  .dark .pf-card:hover .pf-card-title {
+  .dark .shira-card:hover .shira-card-title {
     color: rgb(147 197 253);
   }
-  .dark .pf-card-excerpt {
+  .dark .shira-card-excerpt {
     color: rgb(156 163 175);
   }
 </style>
