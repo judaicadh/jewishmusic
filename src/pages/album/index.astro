@@ -48,7 +48,7 @@ const albums = [...(await getAllAlbums()).values()]
       grid.innerHTML = slice
         .map(
           (a) => `
-        <a href="/album/${a.id}" class="group block">
+        <a href="/album/${a.id}/" class="group block">
           <div class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
             <img src="${a.cover || '/placeholder.jpg'}" alt="" loading="lazy" class="aspect-square w-full object-cover transition group-hover:scale-105" />
           </div>

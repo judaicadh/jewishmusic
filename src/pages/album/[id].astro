@@ -163,7 +163,7 @@ const hasPhysical = !!album.inventoryNumber;
                   {album.performers.map((artist) =>
                     artist.id ? (
                       <a
-                        href={`/artist/${artist.id}`}
+                        href={`/artist/${artist.id}/`}
                         class="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-800 transition hover:border-blue-400 hover:text-blue-700 dark:border-gray-700 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:text-blue-300"
                       >{artist.label}</a>
                     ) : (
@@ -206,7 +206,7 @@ const hasPhysical = !!album.inventoryNumber;
                         <div class="min-w-0">
                           <span class="truncate font-medium text-gray-900 dark:text-white block">{track.label}</span>
                           {track.recordingOf && (
-                            <a href={`/composition/${track.recordingOf.id}`} class="text-xs text-emerald-700 hover:underline dark:text-emerald-400">Recording of {track.recordingOf.title}</a>
+                            <a href={`/composition/${track.recordingOf.id}/`} class="text-xs text-emerald-700 hover:underline dark:text-emerald-400">Recording of {track.recordingOf.title}</a>
                           )}
                         </div>
                       </div>
@@ -256,7 +256,7 @@ const hasPhysical = !!album.inventoryNumber;
                       <dd class="mt-1 flex flex-wrap gap-2">
                         {album.recordLabels.map((l) =>
                           l.id ? (
-                            <a href={`/label/${l.id}`} class="rounded-full bg-gray-100 px-2.5 py-1 text-gray-700 hover:text-blue-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:text-blue-300">{l.label}</a>
+                            <a href={`/label/${l.id}/`} class="rounded-full bg-gray-100 px-2.5 py-1 text-gray-700 hover:text-blue-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:text-blue-300">{l.label}</a>
                           ) : (
                             <span class="rounded-full bg-gray-100 px-2.5 py-1 text-gray-700 dark:bg-gray-800 dark:text-gray-300">{l.label}</span>
                           )
@@ -274,7 +274,7 @@ const hasPhysical = !!album.inventoryNumber;
                   <ul class="mt-4 space-y-2">
                     {worksOnAlbum.map((w) => (
                       <li>
-                        <a href={`/composition/${w.id}`} class="flex items-center gap-2.5 rounded-xl border border-emerald-200/60 bg-white px-3 py-2.5 transition hover:border-emerald-400 dark:border-emerald-800 dark:bg-gray-900 dark:hover:border-emerald-500">
+                        <a href={`/composition/${w.id}/`} class="flex items-center gap-2.5 rounded-xl border border-emerald-200/60 bg-white px-3 py-2.5 transition hover:border-emerald-400 dark:border-emerald-800 dark:bg-gray-900 dark:hover:border-emerald-500">
                           <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
                             <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z" /></svg>
                           </span>

@@ -21,7 +21,7 @@ const labels = [...(await getAllLabels()).values()]
       <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {labels.map((it) => (
           <li>
-            <a href={`/label/${it.id}`} class="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 px-4 py-3 hover:border-blue-400 dark:border-gray-800">
+            <a href={`/label/${it.id}/`} class="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 px-4 py-3 hover:border-blue-400 dark:border-gray-800">
               <span class="truncate font-medium text-gray-800 dark:text-gray-200">{it.name}</span>
               <span class="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">{it.count}</span>
             </a>

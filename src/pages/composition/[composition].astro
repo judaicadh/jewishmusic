@@ -49,7 +49,7 @@ const allAlbums = [...albumMap.values()].sort(
             <div class="flex flex-wrap gap-1.5">
               {composition.composers.map((c) =>
                 c.id ? (
-                  <a href={`/artist/${c.id}`} class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900 dark:text-emerald-200 dark:hover:bg-emerald-800">{c.label}</a>
+                  <a href={`/artist/${c.id}/`} class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900 dark:text-emerald-200 dark:hover:bg-emerald-800">{c.label}</a>
                 ) : (
                   <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">{c.label}</span>
                 )
@@ -63,7 +63,7 @@ const allAlbums = [...albumMap.values()].sort(
             <div class="flex flex-wrap gap-1.5">
               {composition.performers.map((p) =>
                 p.id ? (
-                  <a href={`/artist/${p.id}`} class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">{p.label}</a>
+                  <a href={`/artist/${p.id}/`} class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">{p.label}</a>
                 ) : (
                   <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">{p.label}</span>
                 )
@@ -86,7 +86,7 @@ const allAlbums = [...albumMap.values()].sort(
         </p>
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {allAlbums.map((al) => (
-            <a href={`/album/${al.id}`} class="group block">
+            <a href={`/album/${al.id}/`} class="group block">
               <div class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                 <img
                   src={al.cover || '/placeholder.jpg'}

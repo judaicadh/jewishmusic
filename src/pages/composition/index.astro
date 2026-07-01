@@ -45,7 +45,7 @@ const compositions = [...(await getAllCompositions()).values()]
       const slice = items.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
       list.innerHTML = slice
         .map(
-          (it) => `<li><a href="/composition/${it.id}" class="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-4 py-2.5 hover:border-blue-400 dark:border-gray-800">
+          (it) => `<li><a href="/composition/${it.id}/" class="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-4 py-2.5 hover:border-blue-400 dark:border-gray-800">
             <div class="min-w-0">
               <span class="block truncate text-sm font-medium text-gray-800 dark:text-gray-200">${it.title}</span>
               ${it.composer ? `<span class="block truncate text-xs text-gray-500 dark:text-gray-400">${it.composer}</span>` : ''}

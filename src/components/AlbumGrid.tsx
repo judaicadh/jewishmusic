@@ -241,13 +241,15 @@ function ResultCard({
     //   1. the composition it's a "recording or performance of" (P118),
     //   2. otherwise the album it appears on.
     // Never link out to Wikibase.
+    // Trailing slash is required: pages build as directory-style
+    // (/album/Q30/index.html), so a slash-less URL 404s / breaks client routing.
     const href = AUDIO_TRACK_TYPES.has(hit.typeLabel ?? '')
         ? trackWorks[hit.objectID]
-            ? `/composition/${trackWorks[hit.objectID]}`
+            ? `/composition/${trackWorks[hit.objectID]}/`
             : trackAlbums[hit.objectID]
-                ? `/album/${trackAlbums[hit.objectID]}`
+                ? `/album/${trackAlbums[hit.objectID]}/`
                 : undefined
-        : `/${routePrefix}/${hit.objectID}`;
+        : `/${routePrefix}/${hit.objectID}/`;
 
     return (
         <a
